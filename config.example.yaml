@@ -1,0 +1,196 @@
+# DuckPond Configuration Example
+# This file demonstrates all available configuration options for DuckPond.
+#
+# Default Location: ~/.duckpond/config.yaml
+#
+# Configuration Priority (highest to lowest):
+# 1. Environment variables (e.g., DUCKPOND_PORT=9000)
+# 2. This YAML file (~/.duckpond/config.yaml)
+# 3. Built-in defaults
+
+# Server Configuration
+# Configure the FastAPI/Uvicorn server settings
+server:
+  # Host to bind the server to (0.0.0.0 allows external connections)
+  host: 0.0.0.0
+  
+  # Port to listen on
+  port: 8000
+  
+  # Number of worker processes (recommend: number of CPU cores)
+  workers: 4
+
+# Storage Configuration
+# Configure backend storage for datasets and files
+storage:
+  # Storage backend: "local" or "s3"
+  default_backend: local
+  
+  # Local storage path (used when backend is "local")
+  local_path: ~/.duckpond/data
+  
+  # S3 bucket name (required when backend is "s3")
+  s3_bucket: null
+  
+  # AWS region for S3 bucket
+  s3_region: us-east-1
+  
+  # Custom S3 endpoint URL (for MinIO or other S3-compatible storage)
+  # Set to null or omit for AWS S3
+  s3_endpoint_url: null
+
+# Database Configuration
+# Configure the metadata database (SQLite or PostgreSQL)
+database:
+  # Database connection URL
+  # SQLite example: sqlite:///~/.duckpond/metadata.db
+  # PostgreSQL example: postgresql://user:password@localhost:5432/duckpond
+  url: sqlite:///~/.duckpond/metadata.db
+  
+  # Connection pool size (number of connections to maintain)
+  pool_size: 10
+  
+  # Maximum overflow connections beyond pool_size
+  max_overflow: 20
+  
+  # Connection pool timeout in seconds
+  pool_timeout: 30
+  
+  # Connection recycle time in seconds (prevents stale connections)
+  pool_recycle: 3600
+
+# DuckDB Configuration
+# Configure DuckDB engine settings for analytical queries
+duckdb:
+  # Memory limit per query (e.g., "4GB", "8GB", "16GB")
+  # Adjust based on available system memory
+  memory_limit: 4GB
+
+  # Number of threads for parallel query execution
+  # Recommend: number of CPU cores
+  threads: 4
+
+  # Connection pool size for DuckDB connections
+  pool_size: 10
+
+# Resource Limits
+# Configure tenant resource quotas and limits
+limits:
+  # Maximum file upload size in megabytes
+  max_file_size_mb: 1000
+
+  # Default storage quota per tenant in gigabytes
+  default_max_storage_gb: 100
+
+  # Default query memory limit per tenant in gigabytes
+  default_max_query_memory_gb: 4
+
+  # API key cache TTL in seconds
+  api_key_cache_ttl_seconds: 30
+
+# Streaming Configuration
+# Configure streaming ingestion behavior
+streaming:
+  # Buffer size in records before flushing
+  buffer_size: 100000
+  
+  # Flush interval in seconds
+  flush_interval_seconds: 60
+
+# Upload Configuration
+# Configure file upload behavior
+upload:
+  # Temporary directory for uploads
+  temp_dir: /tmp/duckpond/uploads
+
+# Write-Ahead Log (WAL) Configuration
+# Configure WAL for durability
+wal:
+  # Enable WAL
+  enabled: false
+  
+  # WAL sync mode: fsync, fdatasync, async
+  sync_mode: fdatasync
+  
+  # WAL directory
+  directory: ~/.duckpond/wal
+
+# Catalog Configuration
+# Configure DuckLake catalog
+catalog:
+  # Enable catalog
+  enabled: true
+
+# Logging Configuration
+# Configure application logging behavior
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+  
+  # Log format: "json" or "text"
+  # Use "json" for production (machine-readable)
+  # Use "text" for development (human-readable)
+  format: json
+
+# ============================================================================
+# Usage Instructions:
+# ============================================================================
+#
+# 1. Copy this file to ~/.duckpond/config.yaml:
+#    mkdir -p ~/.duckpond
+#    cp config.example.yaml ~/.duckpond/config.yaml
+#
+# 2. Edit ~/.duckpond/config.yaml with your settings
+#
+# 3. DuckPond will automatically load configuration from ~/.duckpond/config.yaml
+#
+# 4. Override any setting with environment variables:
+#    export DUCKPOND_PORT=9000
+#    export LOG_LEVEL=DEBUG
+#
+# 5. View current configuration:
+#    duckpond config show
+#
+# 6. View configuration as YAML:
+#    duckpond config show --format yaml
+#
+# 7. View specific section:
+#    duckpond config show --section server
+#
+# ============================================================================
+# Production Configuration Examples:
+# ============================================================================
+#
+# High-Performance Configuration:
+# --------------------------------
+# server:
+#   workers: 8
+# duckdb:
+#   memory_limit: 16GB
+#   threads: 8
+# limits:
+#   default_max_query_memory_gb: 8
+#   default_max_concurrent_queries: 20
+#
+# S3 Storage Configuration:
+# --------------------------
+# storage:
+#   default_backend: s3
+#   s3_bucket: my-duckpond-data
+#   s3_region: us-west-2
+#
+# MinIO Configuration:
+# --------------------
+# storage:
+#   default_backend: s3
+#   s3_bucket: duckpond
+#   s3_endpoint_url: http://minio:9000
+#
+# PostgreSQL Configuration:
+# --------------------------
+# database:
+#   url: postgresql://duckpond:password@postgres:5432/duckpond
+#   pool_size: 20
+#   max_overflow: 40
+#
+# ============================================================================

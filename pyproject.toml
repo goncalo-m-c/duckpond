@@ -1,0 +1,78 @@
+[project]
+name = "duckpond"
+version = "25.1"
+description = "Multi-tenant data platform with DuckDB and DuckLake"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "uvloop>=0.19.0",
+    "pyarrow>=14.0.0",
+    "duckdb>=0.9.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.12.0",
+    "asyncpg>=0.29.0",
+    "aiosqlite>=0.19.0",
+    "greenlet>=3.0.0",
+    "aioboto3>=12.0.0",
+    "aiofiles>=23.0.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "bcrypt>=4.1.0",
+    "typer>=0.9.0",
+    "rich>=13.7.0",
+    "structlog>=23.2.0",
+    "python-multipart>=0.0.6",
+    "protobuf>=4.25.0",
+    "python-snappy>=0.7.0",
+    "python-slugify>=8.0.0",
+    "pyyaml>=6.0.3",
+    "python-jose[cryptography]>=3.5.0",
+    "passlib[bcrypt]>=1.7.4",
+    "grpcio-tools>=1.76.0",
+]
+
+
+[project.scripts]
+duckpond = "duckpond.cli:main_cli"
+
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["duckpond*"]
+exclude = ["alembic*", "tests*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+    "httpx>=0.28.1",
+    "isort>=7.0.0",
+    "mypy>=1.18.2",
+    "pandas>=2.3.3",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.14.2",
+]
