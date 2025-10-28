@@ -2,7 +2,7 @@
 
 This module provides dependency injection for:
 - API key extraction and validation
-- Tenant authentication
+- Tenant authentication via database lookup
 - Database session management
 - Catalog manager access
 """
@@ -10,9 +10,12 @@ This module provides dependency injection for:
 from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends, Header
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from duckpond.api.exceptions import ForbiddenException, UnauthorizedException
 from duckpond.config import get_settings
+from duckpond.db.session import get_db_session
+from duckpond.tenants.auth import get_authenticator
 
 
 async def get_api_key(
@@ -52,23 +55,22 @@ async def get_api_key(
 
 async def get_current_tenant(
     api_key: Annotated[str, Depends(get_api_key)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> str:
     """Validate API key and return tenant ID.
 
-    For now, this is a simplified implementation that extracts tenant ID
-    from the API key format. In production, this should validate against
-    a database of API keys.
-
-    API key format: "tenant_<tenant_id>_<random_secret>"
+    This validates the API key against the database using bcrypt hash verification
+    and returns the authenticated tenant ID.
 
     Args:
-        api_key: Validated API key
+        api_key: API key from headers
+        session: Database session
 
     Returns:
         Tenant ID string
 
     Raises:
-        UnauthorizedException: If API key is invalid
+        UnauthorizedException: If API key is invalid or expired
         ForbiddenException: If tenant is not active
 
     Example:
@@ -76,19 +78,34 @@ async def get_current_tenant(
         async def info(tenant_id: str = Depends(get_current_tenant)):
             return {"tenant_id": tenant_id}
     """
-    if not api_key.startswith("tenant_"):
-        raise UnauthorizedException("Invalid API key format")
+    authenticator = get_authenticator()
 
-    parts = api_key.split("_")
-    if len(parts) < 3:
-        raise UnauthorizedException("Invalid API key format")
+    result = await authenticator.authenticate(api_key, session)
 
-    tenant_id = parts[1]
+    if not result:
+        raise UnauthorizedException("Invalid or expired API key")
 
-    if not tenant_id:
-        raise UnauthorizedException("Invalid tenant ID in API key")
+    tenant, api_key_obj = result
 
-    return tenant_id
+    # Check if API key is expired
+    if api_key_obj.expires_at:
+        from datetime import datetime, timezone
+
+        if api_key_obj.expires_at < datetime.now(timezone.utc):
+            raise UnauthorizedException("API key has expired")
+
+    # Update last_used timestamp (async, don't wait for it)
+    # This is done in the background to avoid slowing down requests
+    from datetime import datetime, timezone
+
+    api_key_obj.last_used = datetime.now(timezone.utc)
+    try:
+        await session.commit()
+    except Exception:
+        # Ignore errors when updating last_used - it's not critical
+        await session.rollback()
+
+    return tenant.tenant_id
 
 
 async def validate_tenant_access(
@@ -137,18 +154,8 @@ def get_settings_dependency():
     return get_settings()
 
 
+# Type aliases for cleaner dependency injection
 CurrentTenant = Annotated[str, Depends(get_current_tenant)]
 APIKey = Annotated[str, Depends(get_api_key)]
 Settings = Annotated[object, Depends(get_settings_dependency)]
-
-
-async def get_db_session() -> AsyncGenerator[None, None]:
-    """Get database session (placeholder).
-
-    This is a placeholder for future database integration.
-    Will be implemented when metadata database is added.
-
-    Yields:
-        Database session
-    """
-    yield None
+DatabaseSession = Annotated[AsyncSession, Depends(get_db_session)]
