@@ -100,14 +100,14 @@ class TestTenantUpdate:
         assert "300" in result.stdout
 
     @patch("sys.stdin.isatty", return_value=False)
-    def test_update_multiple_fields(self, mock_isatty):
+    def test_update_multiple_fields(self, mock_isatty, test_tenant):
         """Test updating multiple fields at once."""
         result = runner.invoke(
             app,
             [
                 "tenants",
                 "update",
-                "test-tenant",
+                test_tenant,
                 "--max-storage-gb",
                 "300",
                 "--max-query-memory-gb",
@@ -134,18 +134,18 @@ class TestTenantDelete:
         assert "Preparing to delete tenant" in result.stdout
 
     @patch("sys.stdin.isatty", return_value=False)
-    def test_delete_with_force(self, mock_isatty):
+    def test_delete_with_force(self, mock_isatty, test_tenant):
         """Test delete with force flag."""
-        result = runner.invoke(app, ["tenants", "delete", "test-tenant", "--force"])
+        result = runner.invoke(app, ["tenants", "delete", test_tenant, "--force"])
         assert result.exit_code == 0
         assert "Tenant deleted" in result.stdout or "WARNING" in result.stdout
 
     @patch("sys.stdin.isatty", return_value=False)
-    def test_delete_with_purge(self, mock_isatty):
+    def test_delete_with_purge(self, mock_isatty, test_tenant):
         """Test delete with data purge."""
         result = runner.invoke(
             app,
-            ["tenants", "delete", "test-tenant", "--force", "--purge-data"],
+            ["tenants", "delete", test_tenant, "--force", "--purge-data"],
         )
         assert result.exit_code == 0
         assert "WARNING" in result.stdout
@@ -155,9 +155,9 @@ class TestTenantDelete:
 class TestTenantAPIKey:
     """Tests for tenant API key management."""
 
-    def test_api_key_list(self):
+    def test_api_key_list(self, test_tenant):
         """Test listing API keys."""
-        result = runner.invoke(app, ["tenants", "list-key", "test-tenant"])
+        result = runner.invoke(app, ["tenants", "list-keys", test_tenant])
         assert result.exit_code == 0
         assert "API Keys" in result.stdout or "No API keys found" in result.stdout
 

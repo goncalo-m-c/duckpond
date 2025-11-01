@@ -74,3 +74,24 @@ def setup_test_db(test_db_path):
     # This fixture will run before each test
     # test_db_path fixture already set up the database
     yield
+
+
+@pytest.fixture
+def test_tenant():
+    """Create a test tenant for CLI tests that need it."""
+    from typer.testing import CliRunner
+    from duckpond.cli.main import app
+
+    runner = CliRunner()
+    tenant_id = "test-tenant"
+
+    # Create the test tenant
+    result = runner.invoke(app, ["tenants", "create", tenant_id])
+
+    if result.exit_code != 0:
+        raise RuntimeError(f"Failed to create test tenant: {result.stdout}")
+
+    yield tenant_id
+
+    # Cleanup: try to delete the tenant (may already be deleted by test)
+    runner.invoke(app, ["tenants", "delete", tenant_id, "--force", "--purge-data"])
