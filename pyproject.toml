@@ -2,7 +2,7 @@
 name = "duckpond"
 version = "25.1"
 description = "Multi-tenant data platform with DuckDB and DuckLake"
-requires-python = ">=3.13,<3.14"
+requires-python = "~=3.13.0"
 dependencies = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
