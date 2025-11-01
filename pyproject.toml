@@ -2,7 +2,7 @@
 name = "duckpond"
 version = "25.1"
 description = "Multi-tenant data platform with DuckDB and DuckLake"
-requires-python = "~=3.13.0"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
@@ -43,7 +43,7 @@ include = ["duckpond*"]
 exclude = ["alembic*", "tests*"]
 
 [tool.black]
-line-length = 120
+line-length = 100
 target-version = ['py313']
 
 [tool.isort]
@@ -59,6 +59,26 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.ruff]
+# Ruff can replace both black and isort - 10-100x faster
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+# Enable pycodestyle (E), pyflakes (F), isort (I)
+select = ["E", "F", "I"]
+ignore = []
+
+[tool.ruff.format]
+# Use ruff format instead of black
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.uv]
+# UV-specific configuration
+package = true
 
 [dependency-groups]
 dev = [
