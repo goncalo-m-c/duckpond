@@ -7,7 +7,7 @@ import bcrypt
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from duckpond.tenants.auth import (
+from duckpond.accounts.auth import (
     APIKeyAuthenticator,
     CachedAuthResult,
     generate_api_key,
@@ -15,7 +15,7 @@ from duckpond.tenants.auth import (
     hash_api_key,
     verify_api_key,
 )
-from duckpond.tenants.models import APIKey, Tenant
+from duckpond.accounts.models import APIKey, Account
 
 
 class TestCachedAuthResult:
@@ -23,24 +23,24 @@ class TestCachedAuthResult:
 
     def test_cache_result_creation(self):
         """Test creating a cache result."""
-        tenant = MagicMock(spec=Tenant)
-        tenant.tenant_id = "tenant-test"
+        account = MagicMock(spec=Account)
+        account.account_id = "account-test"
         api_key = MagicMock(spec=APIKey)
         api_key.key_id = "key-123"
 
-        cached = CachedAuthResult(tenant, api_key)
+        cached = CachedAuthResult(account, api_key)
 
-        assert cached.tenant == tenant
+        assert cached.account == account
         assert cached.api_key == api_key
         assert isinstance(cached.timestamp, float)
         assert cached.timestamp <= time.time()
 
     def test_cache_not_expired_within_ttl(self):
         """Test cache entry is not expired within TTL."""
-        tenant = MagicMock(spec=Tenant)
+        account = MagicMock(spec=Account)
         api_key = MagicMock(spec=APIKey)
 
-        cached = CachedAuthResult(tenant, api_key)
+        cached = CachedAuthResult(account, api_key)
 
         # Should not be expired immediately
         assert not cached.is_expired(ttl=30)
@@ -51,10 +51,10 @@ class TestCachedAuthResult:
 
     def test_cache_expired_after_ttl(self):
         """Test cache entry expires after TTL."""
-        tenant = MagicMock(spec=Tenant)
+        account = MagicMock(spec=Account)
         api_key = MagicMock(spec=APIKey)
 
-        cached = CachedAuthResult(tenant, api_key)
+        cached = CachedAuthResult(account, api_key)
 
         # Manually set timestamp to past
         cached.timestamp = time.time() - 31
@@ -64,15 +64,15 @@ class TestCachedAuthResult:
 
     def test_cache_result_repr(self):
         """Test string representation."""
-        tenant = MagicMock(spec=Tenant)
-        tenant.tenant_id = "tenant-test"
+        account = MagicMock(spec=Account)
+        account.account_id = "account-test"
         api_key = MagicMock(spec=APIKey)
 
-        cached = CachedAuthResult(tenant, api_key)
+        cached = CachedAuthResult(account, api_key)
         repr_str = repr(cached)
 
         assert "CachedAuthResult" in repr_str
-        assert "tenant-test" in repr_str
+        assert "account-test" in repr_str
 
 
 class TestAPIKeyAuthenticator:
@@ -89,27 +89,27 @@ class TestAPIKeyAuthenticator:
         return AsyncMock(spec=AsyncSession)
 
     @pytest.fixture
-    def sample_tenant(self):
-        """Create sample tenant."""
-        tenant = MagicMock(spec=Tenant)
-        tenant.tenant_id = "tenant-test"
-        tenant.name = "Test Tenant"
-        return tenant
+    def sample_account(self):
+        """Create sample account."""
+        account = MagicMock(spec=Account)
+        account.account_id = "account-test"
+        account.name = "Test Account"
+        return account
 
     @pytest.fixture
-    def sample_api_key_model(self, sample_tenant):
+    def sample_api_key_model(self, sample_account):
         """Create sample API key model."""
         api_key = MagicMock(spec=APIKey)
         api_key.key_id = "key-123"
-        api_key.tenant_id = "tenant-test"
+        api_key.account_id = "account-test"
         api_key.key_prefix = "testkey1"
         api_key.key_hash = hash_api_key("testkey123456789")
-        api_key.tenant = sample_tenant
+        api_key.account = sample_account
         return api_key
 
     @pytest.mark.asyncio
     async def test_authenticate_cache_miss_success(
-        self, authenticator, mock_session, sample_tenant, sample_api_key_model
+        self, authenticator, mock_session, sample_account, sample_api_key_model
     ):
         """Test successful authentication with cache miss."""
         api_key = "testkey123456789"
@@ -123,8 +123,8 @@ class TestAPIKeyAuthenticator:
         result = await authenticator.authenticate(api_key, mock_session)
 
         assert result is not None
-        tenant, db_key = result
-        assert tenant == sample_tenant
+        account, db_key = result
+        assert account == sample_account
         assert db_key == sample_api_key_model
 
         # Verify cache was populated
@@ -132,20 +132,20 @@ class TestAPIKeyAuthenticator:
 
     @pytest.mark.asyncio
     async def test_authenticate_cache_hit(
-        self, authenticator, mock_session, sample_tenant, sample_api_key_model
+        self, authenticator, mock_session, sample_account, sample_api_key_model
     ):
         """Test authentication with cache hit."""
         api_key = "testkey123456789"
 
         # Populate cache
-        authenticator._put_in_cache(api_key, sample_tenant, sample_api_key_model)
+        authenticator._put_in_cache(api_key, sample_account, sample_api_key_model)
 
         # Authenticate (should not query database)
         result = await authenticator.authenticate(api_key, mock_session)
 
         assert result is not None
-        tenant, db_key = result
-        assert tenant == sample_tenant
+        account, db_key = result
+        assert account == sample_account
         assert db_key == sample_api_key_model
 
         # Verify no database query
@@ -187,13 +187,13 @@ class TestAPIKeyAuthenticator:
 
     @pytest.mark.asyncio
     async def test_authenticate_cache_expiry(
-        self, authenticator, mock_session, sample_tenant, sample_api_key_model
+        self, authenticator, mock_session, sample_account, sample_api_key_model
     ):
         """Test cache entry expiration."""
         api_key = "testkey123456789"
 
         # Populate cache with expired entry
-        cached = CachedAuthResult(sample_tenant, sample_api_key_model)
+        cached = CachedAuthResult(sample_account, sample_api_key_model)
         cached.timestamp = time.time() - 31  # Expired
         authenticator._cache[api_key] = cached
 
@@ -223,47 +223,47 @@ class TestAPIKeyAuthenticator:
 
         assert result is None
 
-    def test_invalidate_specific_key(self, authenticator, sample_tenant, sample_api_key_model):
+    def test_invalidate_specific_key(self, authenticator, sample_account, sample_api_key_model):
         """Test invalidating specific API key."""
         api_key = "testkey123456789"
 
         # Populate cache
-        authenticator._put_in_cache(api_key, sample_tenant, sample_api_key_model)
+        authenticator._put_in_cache(api_key, sample_account, sample_api_key_model)
         assert api_key in authenticator._cache
 
         # Invalidate
         authenticator.invalidate(api_key)
         assert api_key not in authenticator._cache
 
-    def test_invalidate_tenant(self, authenticator, sample_tenant):
-        """Test invalidating all keys for a tenant."""
-        # Create multiple keys for same tenant
+    def test_invalidate_account(self, authenticator, sample_account):
+        """Test invalidating all keys for a account."""
+        # Create multiple keys for same account
         keys = ["key1", "key2", "key3"]
         for key in keys:
             api_key_model = MagicMock(spec=APIKey)
-            api_key_model.tenant_id = "tenant-test"
-            authenticator._put_in_cache(key, sample_tenant, api_key_model)
+            api_key_model.account_id = "account-test"
+            authenticator._put_in_cache(key, sample_account, api_key_model)
 
-        # Add key for different tenant
-        other_tenant = MagicMock(spec=Tenant)
-        other_tenant.tenant_id = "tenant-other"
+        # Add key for different account
+        other_account = MagicMock(spec=Account)
+        other_account.account_id = "account-other"
         other_key = MagicMock(spec=APIKey)
-        authenticator._put_in_cache("otherkey", other_tenant, other_key)
+        authenticator._put_in_cache("otherkey", other_account, other_key)
 
-        # Invalidate tenant
-        authenticator.invalidate_tenant("tenant-test")
+        # Invalidate account
+        authenticator.invalidate_account("account-test")
 
-        # Verify tenant keys removed but other tenant remains
+        # Verify account keys removed but other account remains
         for key in keys:
             assert key not in authenticator._cache
         assert "otherkey" in authenticator._cache
 
-    def test_clear_cache(self, authenticator, sample_tenant, sample_api_key_model):
+    def test_clear_cache(self, authenticator, sample_account, sample_api_key_model):
         """Test clearing entire cache."""
         # Populate cache
         for i in range(5):
             api_key = f"key{i}"
-            authenticator._put_in_cache(api_key, sample_tenant, sample_api_key_model)
+            authenticator._put_in_cache(api_key, sample_account, sample_api_key_model)
 
         assert len(authenticator._cache) == 5
 
@@ -271,7 +271,7 @@ class TestAPIKeyAuthenticator:
         authenticator.clear_cache()
         assert len(authenticator._cache) == 0
 
-    def test_cache_lru_eviction(self, authenticator, sample_tenant):
+    def test_cache_lru_eviction(self, authenticator, sample_account):
         """Test LRU cache eviction when full."""
         # Set small cache size
         authenticator.cache_size = 3
@@ -281,18 +281,18 @@ class TestAPIKeyAuthenticator:
             api_key = f"key{i}"
             api_key_model = MagicMock(spec=APIKey)
             time.sleep(0.01)  # Ensure different timestamps
-            authenticator._put_in_cache(api_key, sample_tenant, api_key_model)
+            authenticator._put_in_cache(api_key, sample_account, api_key_model)
 
         # Cache should only have 3 entries (oldest evicted)
         assert len(authenticator._cache) == 3
         assert "key0" not in authenticator._cache  # Oldest removed
         assert "key3" in authenticator._cache  # Newest present
 
-    def test_get_cache_stats(self, authenticator, sample_tenant, sample_api_key_model):
+    def test_get_cache_stats(self, authenticator, sample_account, sample_api_key_model):
         """Test getting cache statistics."""
         # Add some entries
         for i in range(3):
-            authenticator._put_in_cache(f"key{i}", sample_tenant, sample_api_key_model)
+            authenticator._put_in_cache(f"key{i}", sample_account, sample_api_key_model)
 
         stats = authenticator.get_cache_stats()
 
@@ -370,7 +370,7 @@ class TestGetAuthenticator:
     def test_get_authenticator_creates_singleton(self):
         """Test get_authenticator creates singleton."""
         # Clear any existing singleton
-        import duckpond.tenants.auth as auth_module
+        import duckpond.accounts.auth as auth_module
         auth_module._authenticator = None
 
         auth1 = get_authenticator()
@@ -381,7 +381,7 @@ class TestGetAuthenticator:
     def test_get_authenticator_with_params(self):
         """Test get_authenticator with custom parameters."""
         # Clear singleton
-        import duckpond.tenants.auth as auth_module
+        import duckpond.accounts.auth as auth_module
         auth_module._authenticator = None
 
         auth = get_authenticator(cache_size=500, cache_ttl=60)
@@ -392,7 +392,7 @@ class TestGetAuthenticator:
     def test_get_authenticator_ignores_subsequent_params(self):
         """Test that subsequent calls ignore parameters."""
         # Clear singleton
-        import duckpond.tenants.auth as auth_module
+        import duckpond.accounts.auth as auth_module
         auth_module._authenticator = None
 
         auth1 = get_authenticator(cache_size=100, cache_ttl=30)

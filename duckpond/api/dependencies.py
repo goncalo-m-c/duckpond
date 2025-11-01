@@ -2,7 +2,7 @@
 
 This module provides dependency injection for:
 - API key extraction and validation
-- Tenant authentication via database lookup
+- Account authentication via database lookup
 - Database session management
 - Catalog manager access
 """
@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from duckpond.api.exceptions import ForbiddenException, UnauthorizedException
 from duckpond.config import get_settings
 from duckpond.db.session import get_db_session
-from duckpond.tenants.auth import get_authenticator
+from duckpond.accounts.auth import get_authenticator
 
 
 async def get_api_key(
@@ -53,30 +53,30 @@ async def get_api_key(
     return api_key
 
 
-async def get_current_tenant(
+async def get_current_account(
     api_key: Annotated[str, Depends(get_api_key)],
     session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> str:
-    """Validate API key and return tenant ID.
+    """Validate API key and return account ID.
 
     This validates the API key against the database using bcrypt hash verification
-    and returns the authenticated tenant ID.
+    and returns the authenticated account ID.
 
     Args:
         api_key: API key from headers
         session: Database session
 
     Returns:
-        Tenant ID string
+        Account ID string
 
     Raises:
         UnauthorizedException: If API key is invalid or expired
-        ForbiddenException: If tenant is not active
+        ForbiddenException: If account is not active
 
     Example:
-        @app.get("/tenant-info")
-        async def info(tenant_id: str = Depends(get_current_tenant)):
-            return {"tenant_id": tenant_id}
+        @app.get("/account-info")
+        async def info(account_id: str = Depends(get_current_account)):
+            return {"account_id": account_id}
     """
     authenticator = get_authenticator()
 
@@ -85,7 +85,7 @@ async def get_current_tenant(
     if not result:
         raise UnauthorizedException("Invalid or expired API key")
 
-    tenant, api_key_obj = result
+    account, api_key_obj = result
 
     # Check if API key is expired
     if api_key_obj.expires_at:
@@ -105,39 +105,39 @@ async def get_current_tenant(
         # Ignore errors when updating last_used - it's not critical
         await session.rollback()
 
-    return tenant.tenant_id
+    return account.account_id
 
 
-async def validate_tenant_access(
-    tenant_id: Annotated[str, Depends(get_current_tenant)],
-    requested_tenant: str | None = None,
+async def validate_account_access(
+    account_id: Annotated[str, Depends(get_current_account)],
+    requested_account: str | None = None,
 ) -> str:
-    """Validate that authenticated tenant can access requested resource.
+    """Validate that authenticated account can access requested resource.
 
     Args:
-        tenant_id: Authenticated tenant ID
-        requested_tenant: Tenant ID being requested (optional)
+        account_id: Authenticated account ID
+        requested_account: Account ID being requested (optional)
 
     Returns:
-        Validated tenant ID
+        Validated account ID
 
     Raises:
-        ForbiddenException: If tenant doesn't have access
+        ForbiddenException: If account doesn't have access
 
     Example:
-        @app.get("/tenants/{tenant_id}/data")
+        @app.get("/accounts/{account_id}/data")
         async def get_data(
-            tenant_id: str,
-            validated: str = Depends(validate_tenant_access)
+            account_id: str,
+            validated: str = Depends(validate_account_access)
         ):
-            return {"tenant": validated}
+            return {"account": validated}
     """
-    if requested_tenant and requested_tenant != tenant_id:
+    if requested_account and requested_account != account_id:
         raise ForbiddenException(
-            f"Tenant {tenant_id} cannot access resources for {requested_tenant}"
+            f"Account {account_id} cannot access resources for {requested_account}"
         )
 
-    return tenant_id
+    return account_id
 
 
 def get_settings_dependency():
@@ -155,7 +155,7 @@ def get_settings_dependency():
 
 
 # Type aliases for cleaner dependency injection
-CurrentTenant = Annotated[str, Depends(get_current_tenant)]
+CurrentAccount = Annotated[str, Depends(get_current_account)]
 APIKey = Annotated[str, Depends(get_api_key)]
 Settings = Annotated[object, Depends(get_settings_dependency)]
 DatabaseSession = Annotated[AsyncSession, Depends(get_db_session)]

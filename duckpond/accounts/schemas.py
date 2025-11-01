@@ -1,4 +1,4 @@
-"""Pydantic schemas for tenant operations."""
+"""Pydantic schemas for account operations."""
 
 from datetime import datetime
 from typing import Literal
@@ -6,11 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class TenantCreate(BaseModel):
-    """Schema for creating a new tenant."""
+class AccountCreate(BaseModel):
+    """Schema for creating a new account."""
 
     name: str = Field(
-        ..., min_length=1, max_length=255, description="Unique tenant name"
+        ..., min_length=1, max_length=255, description="Unique account name"
     )
     storage_backend: Literal["local", "s3"] = Field(
         default="local", description="Storage backend type"
@@ -29,8 +29,8 @@ class TenantCreate(BaseModel):
     )
 
 
-class TenantUpdate(BaseModel):
-    """Schema for updating tenant quotas."""
+class AccountUpdate(BaseModel):
+    """Schema for updating account quotas."""
 
     max_storage_gb: int | None = Field(
         default=None, ge=1, description="Maximum storage quota in gigabytes"
@@ -43,11 +43,11 @@ class TenantUpdate(BaseModel):
     )
 
 
-class TenantResponse(BaseModel):
-    """Schema for tenant response."""
+class AccountResponse(BaseModel):
+    """Schema for account response."""
 
-    tenant_id: str = Field(..., description="Unique tenant identifier")
-    name: str = Field(..., description="Tenant name")
+    account_id: str = Field(..., description="Unique account identifier")
+    name: str = Field(..., description="Account name")
     storage_backend: str = Field(..., description="Storage backend type")
     ducklake_catalog_url: str = Field(..., description="DuckLake catalog URL")
     storage_config: dict[str, str] | None = Field(
@@ -62,17 +62,25 @@ class TenantResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TenantCreateResponse(BaseModel):
-    """Schema for tenant creation response with API key."""
+class AccountCreateResponse(BaseModel):
+    """Schema for account creation response with API key."""
 
-    tenant: TenantResponse = Field(..., description="Created tenant details")
+    account: AccountResponse = Field(..., description="Created account details")
     api_key: str = Field(..., description="Plain text API key (only shown once)")
 
 
-class TenantListResponse(BaseModel):
-    """Schema for paginated tenant list response."""
+class AccountListResponse(BaseModel):
+    """Schema for paginated account list response."""
 
-    tenants: list[TenantResponse] = Field(..., description="List of tenants")
-    total: int = Field(..., description="Total number of tenants")
+    accounts: list[AccountResponse] = Field(..., description="List of accounts")
+    total: int = Field(..., description="Total number of accounts")
     offset: int = Field(..., description="Current offset")
     limit: int = Field(..., description="Current limit")
+
+
+# Backward compatibility aliases (deprecated)
+AccountCreate = AccountCreate
+AccountUpdate = AccountUpdate
+AccountResponse = AccountResponse
+AccountCreateResponse = AccountCreateResponse
+AccountListResponse = AccountListResponse

@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from duckpond.api.app import create_app
-from duckpond.api.dependencies import get_current_tenant
+from duckpond.api.dependencies import get_current_account
 from duckpond.catalog.schemas import (
     ColumnSchema,
     CreateDatasetRequest,
@@ -35,10 +35,10 @@ def authenticated_client():
     app = create_app()
 
     # Override authentication to bypass database
-    async def mock_get_current_tenant():
-        return "test-tenant-123"
+    async def mock_get_current_account():
+        return "test-account-123"
 
-    app.dependency_overrides[get_current_tenant] = mock_get_current_tenant
+    app.dependency_overrides[get_current_account] = mock_get_current_account
 
     yield TestClient(app, raise_server_exceptions=False)
 
@@ -49,7 +49,7 @@ def authenticated_client():
 @pytest.fixture
 def auth_headers():
     """Create authentication headers."""
-    return {"X-API-Key": "tenant_test123_secret456"}
+    return {"X-API-Key": "account_test123_secret456"}
 
 
 @pytest.fixture

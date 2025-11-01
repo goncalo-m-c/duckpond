@@ -14,24 +14,24 @@ logger = logging.getLogger(__name__)
 
 class DuckDBConnectionPool:
     """
-    Connection pool for DuckDB with per-tenant DuckLake catalogs.
+    Connection pool for DuckDB with per-account DuckLake catalogs.
 
     This pool manages DuckDB connections with DuckLake extension loaded
-    and tenant-specific catalog attached. Since DuckDB is not truly async,
+    and account-specific catalog attached. Since DuckDB is not truly async,
     all operations run in a thread executor.
 
     Features:
     - Lazy connection creation up to max_connections
     - DuckLake extension auto-loading
-    - Tenant catalog attachment
-    - Memory and thread configuration per tenant
+    - Account catalog attachment
+    - Memory and thread configuration per account
     - Connection health checking
     - Proper cleanup on shutdown
 
     Usage:
         pool = DuckDBConnectionPool(
             max_connections=10,
-            catalog_url="postgresql://host/tenant_catalog",
+            catalog_url="postgresql://host/account_catalog",
             memory_limit="4GB",
             threads=4
         )
@@ -153,7 +153,7 @@ class DuckDBConnectionPool:
         1. Sets memory limit and thread count
         2. Disables progress bar for non-interactive use
         3. Installs and loads DuckLake extension
-        4. Attaches tenant's DuckLake catalog
+        4. Attaches account's DuckLake catalog
 
         Args:
             conn: DuckDB connection to configure

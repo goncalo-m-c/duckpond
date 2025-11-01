@@ -13,7 +13,7 @@ from duckpond.config import settings
 from duckpond.db.base import Base
 
 # Import all models so Alembic can detect them
-from duckpond.tenants.models import APIKey, Tenant  # noqa: F401
+from duckpond.accounts.models import APIKey, Account  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

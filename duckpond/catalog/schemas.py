@@ -283,7 +283,7 @@ class CatalogInfo(BaseModel):
     """Catalog information."""
 
     catalog_name: str = Field(..., description="Catalog name")
-    tenant_id: str = Field(..., description="Tenant ID")
+    account_id: str = Field(..., description="Account ID")
     total_datasets: int = Field(..., ge=0, description="Total datasets")
     total_tables: int = Field(..., ge=0, description="Total tables")
     total_views: int = Field(..., ge=0, description="Total views")

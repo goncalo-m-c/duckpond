@@ -3,12 +3,12 @@
 This module provides storage abstraction with support for:
 - Local filesystem storage
 - S3-compatible cloud storage (future)
-- Tenant isolation through automatic key prefixing
+- Account isolation through automatic key prefixing
 - Async operations for consistent API
 
 Usage:
     backend = get_storage_backend("local", {"path": "/data/duckpond"})
-    await backend.upload_file(Path("local.csv"), "data/file.csv", "tenant-123")
+    await backend.upload_file(Path("local.csv"), "data/file.csv", "account-123")
 """
 
 from pathlib import Path

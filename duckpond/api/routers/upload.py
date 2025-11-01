@@ -12,7 +12,7 @@ import aiofiles
 from fastapi import APIRouter, File, Form, UploadFile, status
 from pydantic import BaseModel, Field
 
-from duckpond.api.dependencies import CurrentTenant
+from duckpond.api.dependencies import CurrentAccount
 from duckpond.api.exceptions import ValidationException
 from duckpond.config import get_settings
 from duckpond.conversion.config import ConversionConfig
@@ -47,7 +47,7 @@ class UploadResponse(BaseModel):
 )
 async def upload_file(
     dataset_name: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     file: UploadFile = File(..., description="File to upload"),
     threads: int = Form(4, description="Number of threads for conversion"),
     memory_limit: str = Form("2GB", description="Memory limit for conversion"),
@@ -60,7 +60,7 @@ async def upload_file(
 
     Args:
         dataset_name: Target dataset name
-        tenant_id: Authenticated tenant ID
+        account_id: Authenticated account ID
         file: Uploaded file (multipart form data)
         threads: Number of conversion threads (default: 4)
         memory_limit: Memory limit for DuckDB (default: 2GB)
@@ -115,7 +115,7 @@ async def upload_file(
         result = await backend.upload_file(
             local_path=temp_path,
             remote_key=f"{dataset_name}/{file.filename}",
-            tenant_id=tenant_id,
+            account_id=account_id,
             conversion_config=config,
         )
 

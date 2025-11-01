@@ -9,7 +9,7 @@ from duckpond.exceptions import StorageBackendError
 from duckpond.storage.backend import StorageBackend
 from duckpond.storage.local_backend import LocalBackend
 from duckpond.storage.s3_backend import S3Backend
-from duckpond.tenants.models import Tenant
+from duckpond.accounts.models import Account
 
 logger = structlog.get_logger()
 
@@ -80,91 +80,91 @@ def get_storage_backend(
         ) from e
 
 
-def get_storage_backend_for_tenant(
-    tenant: Tenant,
+def get_storage_backend_for_account(
+    account: Account,
     cache: bool = True,
 ) -> StorageBackend:
     """
-    Get storage backend instance for a tenant.
+    Get storage backend instance for a account.
 
-    Retrieves the appropriate storage backend based on tenant configuration.
-    Caches backend instances by tenant_id for performance.
+    Retrieves the appropriate storage backend based on account configuration.
+    Caches backend instances by account_id for performance.
 
     Args:
-        tenant: Tenant object with storage configuration
+        account: Account object with storage configuration
         cache: Whether to use cached backend instance (default True)
 
     Returns:
-        StorageBackend instance configured for tenant
+        StorageBackend instance configured for account
 
     Raises:
         StorageBackendError: If backend creation fails
 
     Examples:
-        tenant = await manager.get_tenant_by_id("tenant-123")
-        backend = get_storage_backend_for_tenant(tenant)
+        account = await manager.get_account_by_id("account-123")
+        backend = get_storage_backend_for_account(account)
 
         await backend.upload_file(
             local_path="/tmp/file.txt",
             remote_key="data/file.txt",
-            tenant_id=tenant.tenant_id
+            account_id=account.account_id
         )
     """
-    if cache and tenant.tenant_id in _storage_backend_cache:
-        return _storage_backend_cache[tenant.tenant_id]
+    if cache and account.account_id in _storage_backend_cache:
+        return _storage_backend_cache[account.account_id]
 
     backend = get_storage_backend(
-        backend_type=tenant.storage_backend, config=tenant.storage_config or {}
+        backend_type=account.storage_backend, config=account.storage_config or {}
     )
 
     if cache:
-        _storage_backend_cache[tenant.tenant_id] = backend
+        _storage_backend_cache[account.account_id] = backend
 
     logger.debug(
-        "Created storage backend for tenant",
-        tenant_id=tenant.tenant_id,
-        backend_type=tenant.storage_backend,
+        "Created storage backend for account",
+        account_id=account.account_id,
+        backend_type=account.storage_backend,
         cached=cache,
     )
 
     return backend
 
 
-def clear_storage_backend_cache(tenant_id: Optional[str] = None) -> None:
+def clear_storage_backend_cache(account_id: Optional[str] = None) -> None:
     """
     Clear storage backend cache.
 
-    Useful when tenant configuration changes or for testing.
+    Useful when account configuration changes or for testing.
 
     Args:
-        tenant_id: Specific tenant ID to clear. If None, clears entire cache.
+        account_id: Specific account ID to clear. If None, clears entire cache.
 
     Examples:
-        clear_storage_backend_cache("tenant-123")
+        clear_storage_backend_cache("account-123")
 
         clear_storage_backend_cache()
     """
-    if tenant_id:
-        _storage_backend_cache.pop(tenant_id, None)
-        logger.debug("Cleared storage backend cache", tenant_id=tenant_id)
+    if account_id:
+        _storage_backend_cache.pop(account_id, None)
+        logger.debug("Cleared storage backend cache", account_id=account_id)
     else:
         _storage_backend_cache.clear()
         logger.debug("Cleared all storage backend cache")
 
 
-async def calculate_tenant_storage_usage(
-    tenant: Tenant,
+async def calculate_account_storage_usage(
+    account: Account,
     storage_backend: Optional[StorageBackend] = None,
 ) -> int:
     """
-    Calculate total storage usage for a tenant in bytes.
+    Calculate total storage usage for a account in bytes.
 
-    Sums up file sizes for all files under the tenant's prefix.
+    Sums up file sizes for all files under the account's prefix.
 
     Args:
-        tenant: Tenant object
+        account: Account object
         storage_backend: Optional pre-initialized storage backend.
-                        If None, will create one from tenant config.
+                        If None, will create one from account config.
 
     Returns:
         Total storage usage in bytes
@@ -173,22 +173,22 @@ async def calculate_tenant_storage_usage(
         StorageBackendError: If storage operations fail
 
     Examples:
-        tenant = await manager.get_tenant_by_id("tenant-123")
+        account = await manager.get_account_by_id("account-123")
 
-        usage_bytes = await calculate_tenant_storage_usage(tenant)
+        usage_bytes = await calculate_account_storage_usage(account)
         usage_gb = usage_bytes / (1024 ** 3)
 
-        print(f"Tenant uses {usage_gb:.2f} GB")
+        print(f"Account uses {usage_gb:.2f} GB")
     """
     if storage_backend is None:
-        storage_backend = get_storage_backend_for_tenant(tenant)
+        storage_backend = get_storage_backend_for_account(account)
 
     try:
-        usage = await storage_backend.get_storage_usage(tenant.tenant_id)
+        usage = await storage_backend.get_storage_usage(account.account_id)
 
         logger.info(
-            "Calculated tenant storage usage",
-            tenant_id=tenant.tenant_id,
+            "Calculated account storage usage",
+            account_id=account.account_id,
             usage_bytes=usage,
             usage_gb=round(usage / (1024**3), 2),
         )
@@ -198,38 +198,38 @@ async def calculate_tenant_storage_usage(
     except Exception as e:
         logger.error(
             "Failed to calculate storage usage",
-            tenant_id=tenant.tenant_id,
+            account_id=account.account_id,
             error=str(e),
         )
         raise StorageBackendError(
-            tenant.storage_backend,
+            account.storage_backend,
             "calculate_usage",
             f"Failed to calculate storage usage: {str(e)}",
         ) from e
 
 
 async def check_storage_connectivity(
-    tenant: Tenant,
+    account: Account,
     storage_backend: Optional[StorageBackend] = None,
 ) -> tuple[bool, Optional[str]]:
     """
-    Check storage backend connectivity for a tenant.
+    Check storage backend connectivity for a account.
 
     Performs a basic connectivity test to ensure the storage backend
     is accessible and properly configured.
 
     Args:
-        tenant: Tenant object
+        account: Account object
         storage_backend: Optional pre-initialized storage backend.
-                        If None, will create one from tenant config.
+                        If None, will create one from account config.
 
     Returns:
         Tuple of (success: bool, error_message: Optional[str])
 
     Examples:
-        tenant = await manager.get_tenant_by_id("tenant-123")
+        account = await manager.get_account_by_id("account-123")
 
-        success, error = await check_storage_connectivity(tenant)
+        success, error = await check_storage_connectivity(account)
         if success:
             print("Storage is accessible")
         else:
@@ -237,19 +237,19 @@ async def check_storage_connectivity(
     """
     if storage_backend is None:
         try:
-            storage_backend = get_storage_backend_for_tenant(tenant)
+            storage_backend = get_storage_backend_for_account(account)
         except Exception as e:
             return False, f"Failed to create storage backend: {str(e)}"
 
     try:
         await storage_backend.list_files(
-            prefix="", tenant_id=tenant.tenant_id, recursive=False
+            prefix="", account_id=account.account_id, recursive=False
         )
 
         logger.info(
             "Storage connectivity check passed",
-            tenant_id=tenant.tenant_id,
-            backend_type=tenant.storage_backend,
+            account_id=account.account_id,
+            backend_type=account.storage_backend,
         )
 
         return True, None
@@ -258,8 +258,8 @@ async def check_storage_connectivity(
         error_msg = f"Storage connectivity check failed: {str(e)}"
         logger.warning(
             "Storage connectivity check failed",
-            tenant_id=tenant.tenant_id,
-            backend_type=tenant.storage_backend,
+            account_id=account.account_id,
+            backend_type=account.storage_backend,
             error=str(e),
         )
         return False, error_msg

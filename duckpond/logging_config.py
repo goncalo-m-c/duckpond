@@ -78,13 +78,13 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
 def log_operation(
     logger: structlog.stdlib.BoundLogger,
     operation: str,
-    tenant_id: str | None = None,
+    account_id: str | None = None,
     **kwargs: Any,
 ) -> None:
     """Log an operation with standard context."""
     context = {"operation": operation}
-    if tenant_id:
-        context["tenant_id"] = tenant_id
+    if account_id:
+        context["account_id"] = account_id
     context.update(kwargs)
 
     logger.info("operation", **context)
@@ -94,7 +94,7 @@ def log_error(
     logger: structlog.stdlib.BoundLogger,
     error: Exception,
     operation: str,
-    tenant_id: str | None = None,
+    account_id: str | None = None,
     **kwargs: Any,
 ) -> None:
     """Log an error with standard context."""
@@ -103,8 +103,8 @@ def log_error(
         "error_type": type(error).__name__,
         "error_message": str(error),
     }
-    if tenant_id:
-        context["tenant_id"] = tenant_id
+    if account_id:
+        context["account_id"] = account_id
     context.update(kwargs)
 
     logger.error("operation_failed", **context, exc_info=True)

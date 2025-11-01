@@ -1,4 +1,4 @@
-"""DuckLake catalog manager for tenant-specific catalogs."""
+"""DuckLake catalog manager for account-specific catalogs."""
 
 import asyncio
 import logging
@@ -8,50 +8,50 @@ from typing import AsyncIterator
 import duckdb
 
 from duckpond.query.pool import DuckDBConnectionPool
-from duckpond.tenants.models import Tenant
+from duckpond.accounts.models import Account
 
 logger = logging.getLogger(__name__)
 
 
-class TenantDuckLakeManager:
+class AccountDuckLakeManager:
     """
-    Manages DuckLake catalog and connection pool for a tenant.
+    Manages DuckLake catalog and connection pool for a account.
 
     This class provides:
-    - Tenant-specific connection pool with DuckLake catalog
+    - Account-specific connection pool with DuckLake catalog
     - Automatic pool initialization
-    - Connection acquisition with tenant context
+    - Connection acquisition with account context
     - Proper cleanup on shutdown
 
-    Each tenant has:
+    Each account has:
     - Isolated DuckLake catalog (separate database or file)
     - Dedicated connection pool
     - Memory and concurrency limits
 
     Usage:
-        manager = TenantDuckLakeManager(tenant)
+        manager = AccountDuckLakeManager(account)
         await manager.initialize()
 
         async with manager.get_connection() as conn:
             result = await manager.execute(conn, "SELECT * FROM catalog.sales")
     """
 
-    def __init__(self, tenant: Tenant, max_connections: int = 10) -> None:
+    def __init__(self, account: Account, max_connections: int = 10) -> None:
         """
-        Initialize tenant DuckLake manager.
+        Initialize account DuckLake manager.
 
         Args:
-            tenant: Tenant model with configuration
+            account: Account model with configuration
             max_connections: Maximum connections in pool (default: 10)
         """
-        self.tenant = tenant
+        self.account = account
         self.max_connections = max_connections
         self.pool: DuckDBConnectionPool | None = None
 
         logger.debug(
-            f"Initialized TenantDuckLakeManager for tenant {tenant.tenant_id}",
+            f"Initialized AccountDuckLakeManager for account {account.account_id}",
             extra={
-                "tenant_id": tenant.tenant_id,
+                "account_id": account.account_id,
                 "max_connections": max_connections,
             },
         )
@@ -60,9 +60,9 @@ class TenantDuckLakeManager:
         """
         Initialize connection pool with DuckLake catalog.
 
-        This creates the connection pool with tenant-specific configuration:
-        - Catalog URL from tenant.ducklake_catalog_url
-        - Memory limit from tenant.max_query_memory_gb
+        This creates the connection pool with account-specific configuration:
+        - Catalog URL from account.ducklake_catalog_url
+        - Memory limit from account.max_query_memory_gb
         - Thread count (fixed at 4 for now)
 
         Raises:
@@ -70,34 +70,34 @@ class TenantDuckLakeManager:
         """
         if self.pool is not None:
             logger.warning(
-                f"Pool already initialized for tenant {self.tenant.tenant_id}"
+                f"Pool already initialized for account {self.account.account_id}"
             )
             return
 
         logger.debug(
-            f"Initializing connection pool for tenant {self.tenant.tenant_id}",
+            f"Initializing connection pool for account {self.account.account_id}",
             extra={
-                "tenant_id": self.tenant.tenant_id,
-                "catalog_url": self.tenant.ducklake_catalog_url,
-                "memory_limit": f"{self.tenant.max_query_memory_gb}GB",
+                "account_id": self.account.account_id,
+                "catalog_url": self.account.ducklake_catalog_url,
+                "memory_limit": f"{self.account.max_query_memory_gb}GB",
             },
         )
 
         self.pool = DuckDBConnectionPool(
             max_connections=self.max_connections,
-            catalog_url=self.tenant.ducklake_catalog_url,
-            memory_limit=f"{self.tenant.max_query_memory_gb}GB",
+            catalog_url=self.account.ducklake_catalog_url,
+            memory_limit=f"{self.account.max_query_memory_gb}GB",
             threads=4,
         )
 
         await self.pool.initialize(min_connections=1)
 
-        logger.debug(f"Connection pool initialized for tenant {self.tenant.tenant_id}")
+        logger.debug(f"Connection pool initialized for account {self.account.account_id}")
 
     @asynccontextmanager
     async def get_connection(self) -> AsyncIterator[duckdb.DuckDBPyConnection]:
         """
-        Get connection with tenant's DuckLake catalog attached.
+        Get connection with account's DuckLake catalog attached.
 
         This is a convenience wrapper around pool.acquire() that
         automatically initializes the pool if needed.
@@ -140,7 +140,7 @@ class TenantDuckLakeManager:
         """
         if self.pool is None:
             raise RuntimeError(
-                f"Pool not initialized for tenant {self.tenant.tenant_id}"
+                f"Pool not initialized for account {self.account.account_id}"
             )
 
         return await self.pool.execute(conn, sql)
@@ -149,10 +149,10 @@ class TenantDuckLakeManager:
         """
         Close connection pool and release resources.
 
-        This should be called when tenant is deleted or system is shutting down.
+        This should be called when account is deleted or system is shutting down.
         """
         if self.pool is not None:
-            logger.info(f"Closing connection pool for tenant {self.tenant.tenant_id}")
+            logger.info(f"Closing connection pool for account {self.account.account_id}")
             await self.pool.close()
             self.pool = None
 
@@ -176,18 +176,18 @@ class TenantDuckLakeManager:
         return self.pool.total_connections
 
 
-class TenantDuckLakeManagerRegistry:
+class AccountDuckLakeManagerRegistry:
     """
-    Registry for managing TenantDuckLakeManager instances.
+    Registry for managing AccountDuckLakeManager instances.
 
-    This singleton maintains a pool manager per tenant and handles:
+    This singleton maintains a pool manager per account and handles:
     - Lazy creation of managers
     - Manager lifecycle
     - Cleanup on shutdown
 
     Usage:
-        registry = TenantDuckLakeManagerRegistry()
-        manager = await registry.get_manager(tenant)
+        registry = AccountDuckLakeManagerRegistry()
+        manager = await registry.get_manager(account)
 
         async with manager.get_connection() as conn:
             result = await manager.execute(conn, "SELECT * FROM catalog.sales")
@@ -197,63 +197,63 @@ class TenantDuckLakeManagerRegistry:
 
     def __init__(self) -> None:
         """Initialize empty registry."""
-        self._managers: dict[str, TenantDuckLakeManager] = {}
+        self._managers: dict[str, AccountDuckLakeManager] = {}
         self._lock = asyncio.Lock()
-        logger.info("Initialized TenantDuckLakeManagerRegistry")
+        logger.info("Initialized AccountDuckLakeManagerRegistry")
 
     async def get_manager(
-        self, tenant: Tenant, max_connections: int = 10
-    ) -> TenantDuckLakeManager:
+        self, account: Account, max_connections: int = 10
+    ) -> AccountDuckLakeManager:
         """
-        Get or create manager for tenant.
+        Get or create manager for account.
 
         Args:
-            tenant: Tenant model
-            max_connections: Maximum connections per tenant
+            account: Account model
+            max_connections: Maximum connections per account
 
         Returns:
-            TenantDuckLakeManager for tenant
+            AccountDuckLakeManager for account
         """
         async with self._lock:
-            if tenant.tenant_id not in self._managers:
-                logger.info(f"Creating new manager for tenant {tenant.tenant_id}")
-                manager = TenantDuckLakeManager(tenant, max_connections)
+            if account.account_id not in self._managers:
+                logger.info(f"Creating new manager for account {account.account_id}")
+                manager = AccountDuckLakeManager(account, max_connections)
                 await manager.initialize()
-                self._managers[tenant.tenant_id] = manager
+                self._managers[account.account_id] = manager
 
-            return self._managers[tenant.tenant_id]
+            return self._managers[account.account_id]
 
-    async def remove_manager(self, tenant_id: str) -> None:
+    async def remove_manager(self, account_id: str) -> None:
         """
-        Remove and close manager for tenant.
+        Remove and close manager for account.
 
         Args:
-            tenant_id: Tenant ID to remove
+            account_id: Account ID to remove
         """
         async with self._lock:
-            if tenant_id in self._managers:
-                logger.info(f"Removing manager for tenant {tenant_id}")
-                manager = self._managers.pop(tenant_id)
+            if account_id in self._managers:
+                logger.info(f"Removing manager for account {account_id}")
+                manager = self._managers.pop(account_id)
                 await manager.close()
 
     async def close_all(self) -> None:
         """Close all managers and release resources."""
-        logger.info("Closing all tenant managers")
+        logger.info("Closing all account managers")
 
         async with self._lock:
-            for tenant_id, manager in self._managers.items():
+            for account_id, manager in self._managers.items():
                 try:
                     await manager.close()
                 except Exception as e:
-                    logger.error(f"Error closing manager for tenant {tenant_id}: {e}")
+                    logger.error(f"Error closing manager for account {account_id}: {e}")
 
             self._managers.clear()
 
-        logger.info("All tenant managers closed")
+        logger.info("All account managers closed")
 
     @property
-    def active_tenants(self) -> list[str]:
-        """Get list of tenant IDs with active managers."""
+    def active_accounts(self) -> list[str]:
+        """Get list of account IDs with active managers."""
         return list(self._managers.keys())
 
     @property
@@ -262,19 +262,19 @@ class TenantDuckLakeManagerRegistry:
         return len(self._managers)
 
 
-_registry: TenantDuckLakeManagerRegistry | None = None
+_registry: AccountDuckLakeManagerRegistry | None = None
 
 
-def get_registry() -> TenantDuckLakeManagerRegistry:
+def get_registry() -> AccountDuckLakeManagerRegistry:
     """
-    Get global TenantDuckLakeManagerRegistry instance.
+    Get global AccountDuckLakeManagerRegistry instance.
 
     Returns:
         Global registry singleton
     """
     global _registry
     if _registry is None:
-        _registry = TenantDuckLakeManagerRegistry()
+        _registry = AccountDuckLakeManagerRegistry()
     return _registry
 
 

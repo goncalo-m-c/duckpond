@@ -50,7 +50,7 @@ async def test_run_migrations_upgrade_to_head(test_engine):
 
         tables = await conn.run_sync(get_tables)
 
-    assert "tenants" in tables, "Tenants table should exist"
+    assert "accounts" in tables, "Accounts table should exist"
     assert "api_keys" in tables, "API keys table should exist"
     assert "alembic_version" in tables, "Alembic version table should exist"
 
@@ -72,7 +72,7 @@ async def test_downgrade_migrations_to_base(test_engine):
 
         tables = await conn.run_sync(get_tables)
 
-    assert "tenants" in tables
+    assert "accounts" in tables
     assert "api_keys" in tables
 
     # Now downgrade to base
@@ -82,7 +82,7 @@ async def test_downgrade_migrations_to_base(test_engine):
     async with test_engine.connect() as conn:
         tables = await conn.run_sync(get_tables)
 
-    assert "tenants" not in tables, "Tenants table should be removed"
+    assert "accounts" not in tables, "Accounts table should be removed"
     assert "api_keys" not in tables, "API keys table should be removed"
     assert "alembic_version" in tables, "Alembic version table should remain"
 
@@ -185,20 +185,20 @@ async def test_verify_indexes_created(test_engine):
         def get_indexes(connection):
             inspector = inspect(connection)
             return {
-                "tenants": inspector.get_indexes("tenants"),
+                "accounts": inspector.get_indexes("accounts"),
                 "api_keys": inspector.get_indexes("api_keys"),
             }
 
         indexes = await conn.run_sync(get_indexes)
 
-    # Check tenants table indexes
-    tenant_index_names = [idx["name"] for idx in indexes["tenants"]]
-    assert "idx_tenants_name" in tenant_index_names
-    assert "idx_tenants_storage_backend" in tenant_index_names
+    # Check accounts table indexes
+    account_index_names = [idx["name"] for idx in indexes["accounts"]]
+    assert "idx_accounts_name" in account_index_names
+    assert "idx_accounts_storage_backend" in account_index_names
 
     # Check api_keys table indexes
     api_key_index_names = [idx["name"] for idx in indexes["api_keys"]]
-    assert "idx_api_keys_tenant" in api_key_index_names
+    assert "idx_api_keys_account" in api_key_index_names
     assert "idx_api_keys_hash" in api_key_index_names
     assert "idx_api_keys_expires" in api_key_index_names
 
@@ -218,14 +218,13 @@ async def test_verify_foreign_key_constraints(test_engine):
 
         fks = await conn.run_sync(get_foreign_keys)
 
-    # Should have one foreign key from api_keys to tenants
-    assert len(fks) >= 1, "Should have at least one foreign key"
+    # Should have one foreign key from api_keys to accounts     assert len(fks) >= 1, "Should have at least one foreign key"
 
     # Verify the foreign key references the correct table
     fk = fks[0]
-    assert fk["referred_table"] == "tenants"
-    assert "tenant_id" in fk["constrained_columns"]
-    assert "tenant_id" in fk["referred_columns"]
+    assert fk["referred_table"] == "accounts"
+    assert "account_id" in fk["constrained_columns"]
+    assert "account_id" in fk["referred_columns"]
 
 
 @pytest.mark.asyncio

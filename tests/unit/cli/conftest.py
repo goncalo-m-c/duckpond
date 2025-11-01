@@ -77,21 +77,21 @@ def setup_test_db(test_db_path):
 
 
 @pytest.fixture
-def test_tenant():
-    """Create a test tenant for CLI tests that need it."""
+def test_account():
+    """Create a test account for CLI tests that need it."""
     from typer.testing import CliRunner
     from duckpond.cli.main import app
 
     runner = CliRunner()
-    tenant_id = "test-tenant"
+    account_id = "test-account"
 
-    # Create the test tenant
-    result = runner.invoke(app, ["tenants", "create", tenant_id])
+    # Create the test account
+    result = runner.invoke(app, ["accounts", "create", account_id])
 
     if result.exit_code != 0:
-        raise RuntimeError(f"Failed to create test tenant: {result.stdout}")
+        raise RuntimeError(f"Failed to create test account: {result.stdout}")
 
-    yield tenant_id
+    yield account_id
 
-    # Cleanup: try to delete the tenant (may already be deleted by test)
-    runner.invoke(app, ["tenants", "delete", tenant_id, "--force", "--purge-data"])
+    # Cleanup: try to delete the account (may already be deleted by test)
+    runner.invoke(app, ["accounts", "delete", account_id, "--force", "--purge-data"])

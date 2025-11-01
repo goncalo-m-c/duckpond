@@ -169,40 +169,40 @@ class PrometheusParser:
         return True, None
 
     @staticmethod
-    def extract_tenant_id(headers: Dict[str, str]) -> Optional[str]:
-        """Extract tenant ID from request headers.
+    def extract_account_id(headers: Dict[str, str]) -> Optional[str]:
+        """Extract account ID from request headers.
 
-        Looks for tenant identification in common header fields:
+        Looks for account identification in common header fields:
         - X-Scope-OrgID (Cortex/Mimir standard)
-        - X-Tenant-ID
+        - X-Account-ID
         - X-Organization-ID
 
         Args:
             headers: HTTP request headers
 
         Returns:
-            Optional[str]: Tenant ID if found, None otherwise
+            Optional[str]: Account ID if found, None otherwise
 
         Example:
             >>> parser = PrometheusParser()
-            >>> headers = {'X-Scope-OrgID': 'tenant-123'}
-            >>> tenant_id = parser.extract_tenant_id(headers)
-            >>> assert tenant_id == 'tenant-123'
+            >>> headers = {'X-Scope-OrgID': 'account-123'}
+            >>> account_id = parser.extract_account_id(headers)
+            >>> assert account_id == 'account-123'
         """
         normalized_headers = {k.lower(): v for k, v in headers.items()}
 
-        tenant_headers = [
+        account_headers = [
             "x-scope-orgid",
-            "x-tenant-id",
+            "x-account-id",
             "x-organization-id",
             "x-org-id",
         ]
 
-        for header in tenant_headers:
-            tenant_id = normalized_headers.get(header)
-            if tenant_id:
-                logger.debug(f"Extracted tenant ID: {tenant_id} from header {header}")
-                return tenant_id
+        for header in account_headers:
+            account_id = normalized_headers.get(header)
+            if account_id:
+                logger.debug(f"Extracted account ID: {account_id} from header {header}")
+                return account_id
 
         return None
 

@@ -14,7 +14,7 @@ from duckpond.logging_config import get_logger, setup_logging
 
 app = typer.Typer(
     name="duckpond",
-    help="DuckPond - Multi-tenant data platform with DuckDB and DuckLake",
+    help="DuckPond - Multi-account data platform with DuckDB and DuckLake",
     add_completion=True,
     rich_markup_mode="rich",
     no_args_is_help=False,
@@ -86,7 +86,7 @@ def main(
     ),
 ) -> None:
     """
-    DuckPond - Multi-tenant data platform
+    DuckPond - Multi-account data platform
 
     A high-performance data platform with file upload, streaming ingestion,
     and unified queries using DuckDB and DuckLake.
@@ -147,12 +147,12 @@ try:
         init,
         query,
         stream,
-        tenant,
+        account,
     )
 
     app.add_typer(init.app, name="init", help="Initialize DuckPond application")
     app.add_typer(config.app, name="config", help="Configuration management")
-    app.add_typer(tenant.app, name="tenants", help="Manage tenants")
+    app.add_typer(account.app, name="accounts", help="Manage accounts")
     app.add_typer(dataset.app, name="dataset", help="Manage datasets")
     app.add_typer(query.app, name="query", help="Execute SQL queries")
     app.add_typer(stream.app, name="stream", help="Manage streams")

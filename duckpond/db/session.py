@@ -44,8 +44,8 @@ async def get_session(
     Example:
         ```python
         async with get_session(session_factory) as session:
-            result = await session.execute(select(Tenant))
-            tenants = result.scalars().all()
+            result = await session.execute(select(Account))
+            accounts = result.scalars().all()
         ```
     """
     session = session_factory()
@@ -80,8 +80,8 @@ async def get_session_no_commit(
     Example:
         ```python
         async with get_session_no_commit(session_factory) as session:
-            result = await session.execute(select(Tenant))
-            tenants = result.scalars().all()
+            result = await session.execute(select(Account))
+            accounts = result.scalars().all()
         ```
     """
     session = session_factory()

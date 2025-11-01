@@ -13,8 +13,8 @@ Example usage:
     db = DatabaseSession(engine)
 
     async with db.session() as session:
-        result = await session.execute(select(Tenant))
-        tenants = result.scalars().all()
+        result = await session.execute(select(Account))
+        accounts = result.scalars().all()
 
     await db.close()
     ```
