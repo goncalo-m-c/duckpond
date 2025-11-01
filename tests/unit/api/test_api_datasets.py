@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from duckpond.api.app import create_app
+from duckpond.api.dependencies import get_current_tenant
 from duckpond.catalog.schemas import (
     ColumnSchema,
     CreateDatasetRequest,
@@ -22,9 +23,27 @@ from duckpond.exceptions import DatasetNotFoundError
 
 @pytest.fixture
 def client():
-    """Create test client."""
+    """Create test client without authentication override."""
     app = create_app()
-    return TestClient(app, raise_server_exceptions=False)
+    yield TestClient(app, raise_server_exceptions=False)
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def authenticated_client():
+    """Create test client with mocked authentication."""
+    app = create_app()
+
+    # Override authentication to bypass database
+    async def mock_get_current_tenant():
+        return "test-tenant-123"
+
+    app.dependency_overrides[get_current_tenant] = mock_get_current_tenant
+
+    yield TestClient(app, raise_server_exceptions=False)
+
+    # Clean up overrides
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -56,7 +75,7 @@ def sample_dataset_metadata():
 class TestListDatasets:
     """Test dataset listing endpoint."""
 
-    def test_list_datasets_success(self, client, auth_headers):
+    def test_list_datasets_success(self, authenticated_client, auth_headers):
         """Test successful dataset listing."""
         with patch(
             "duckpond.api.routers.datasets.create_catalog_manager"
@@ -78,7 +97,7 @@ class TestListDatasets:
             )
             mock_catalog.return_value = mock_manager
 
-            response = client.get("/api/v1/datasets", headers=auth_headers)
+            response = authenticated_client.get("/api/v1/datasets", headers=auth_headers)
 
             assert response.status_code == 200
             data = response.json()
@@ -86,7 +105,7 @@ class TestListDatasets:
             assert len(data["datasets"]) == 2
             assert data["datasets"][0]["name"] == "dataset1"
 
-    def test_list_datasets_with_type_filter(self, client, auth_headers):
+    def test_list_datasets_with_type_filter(self, authenticated_client, auth_headers):
         """Test dataset listing with type filter."""
         with patch(
             "duckpond.api.routers.datasets.create_catalog_manager"
@@ -104,7 +123,7 @@ class TestListDatasets:
             )
             mock_catalog.return_value = mock_manager
 
-            response = client.get(
+            response = authenticated_client.get(
                 "/api/v1/datasets?dataset_type=table", headers=auth_headers
             )
 
@@ -113,7 +132,7 @@ class TestListDatasets:
             assert data["total"] == 1
             mock_manager.list_datasets.assert_called_once()
 
-    def test_list_datasets_with_pattern(self, client, auth_headers):
+    def test_list_datasets_with_pattern(self, authenticated_client, auth_headers):
         """Test dataset listing with name pattern."""
         with patch(
             "duckpond.api.routers.datasets.create_catalog_manager"
@@ -131,7 +150,7 @@ class TestListDatasets:
             )
             mock_catalog.return_value = mock_manager
 
-            response = client.get(
+            response = authenticated_client.get(
                 "/api/v1/datasets?pattern=sales%", headers=auth_headers
             )
 
@@ -139,7 +158,7 @@ class TestListDatasets:
             data = response.json()
             assert data["total"] == 1
 
-    def test_list_datasets_empty(self, client, auth_headers):
+    def test_list_datasets_empty(self, authenticated_client, auth_headers):
         """Test listing with no datasets."""
         with patch(
             "duckpond.api.routers.datasets.create_catalog_manager"
@@ -150,7 +169,7 @@ class TestListDatasets:
             )
             mock_catalog.return_value = mock_manager
 
-            response = client.get("/api/v1/datasets", headers=auth_headers)
+            response = authenticated_client.get("/api/v1/datasets", headers=auth_headers)
 
             assert response.status_code == 200
             data = response.json()
@@ -161,7 +180,7 @@ class TestListDatasets:
 class TestGetDataset:
     """Test get dataset endpoint."""
 
-    def test_get_dataset_success(self, client, auth_headers, sample_dataset_metadata):
+    def test_get_dataset_success(self, authenticated_client, auth_headers, sample_dataset_metadata):
         """Test successful dataset retrieval."""
         with patch(
             "duckpond.api.routers.datasets.create_catalog_manager"
@@ -170,14 +189,14 @@ class TestGetDataset:
             mock_manager.get_dataset_metadata.return_value = sample_dataset_metadata
             mock_catalog.return_value = mock_manager
 
-            response = client.get("/api/v1/datasets/test_dataset", headers=auth_headers)
+            response = authenticated_client.get("/api/v1/datasets/test_dataset", headers=auth_headers)
 
             assert response.status_code == 200
             data = response.json()
             assert data["name"] == "test_dataset"
             assert data["type"] == "table"
 
-    def test_get_dataset_not_found(self, client, auth_headers):
+    def test_get_dataset_not_found(self, authenticated_client, auth_headers):
         """Test dataset not found."""
         with patch(
             "duckpond.api.routers.datasets.create_catalog_manager"
@@ -188,7 +207,7 @@ class TestGetDataset:
             )
             mock_catalog.return_value = mock_manager
 
-            response = client.get("/api/v1/datasets/nonexistent", headers=auth_headers)
+            response = authenticated_client.get("/api/v1/datasets/nonexistent", headers=auth_headers)
 
             assert response.status_code == 404
             assert "not found" in response.json()["detail"].lower()
