@@ -19,9 +19,9 @@ from duckpond.cli.output import (
 )
 from duckpond.db.session import get_engine, create_session_factory, get_session
 from duckpond.logging_config import get_logger
-from duckpond.query.ducklake import TenantDuckLakeManager
+from duckpond.query.ducklake import AccountDuckLakeManager
 from duckpond.query.executor import QueryExecutor
-from duckpond.tenants.manager import TenantManager
+from duckpond.accounts.manager import AccountManager
 
 app = typer.Typer(help="Execute SQL queries")
 console = Console()
@@ -30,7 +30,7 @@ logger = get_logger(__name__)
 
 @app.command()
 def execute(
-    tenant_id: str = typer.Option(..., "--tenant", "-t", help="Tenant ID"),
+    account_id: str = typer.Option(..., "--account", "-t", help="Account ID"),
     sql: Optional[str] = typer.Option(None, "--sql", "-s", help="SQL query string"),
     file: Optional[Path] = typer.Option(
         None,
@@ -64,24 +64,24 @@ def execute(
     ),
 ) -> None:
     """
-    Execute SQL query against tenant's DuckLake catalog.
+    Execute SQL query against account's DuckLake catalog.
 
     Queries are executed with validation and security checks. Results can be
     output in multiple formats and optionally exported to a file.
 
     Examples:
-        duckpond query execute --tenant abc123 --sql "SELECT * FROM catalog.sales LIMIT 10"
+        duckpond query execute --account abc123 --sql "SELECT * FROM catalog.sales LIMIT 10"
 
-        duckpond query execute --tenant abc123 --file query.sql
+        duckpond query execute --account abc123 --file query.sql
 
-        duckpond query execute --tenant abc123 --attach "default" \\
+        duckpond query execute --account abc123 --attach "default" \\
             --sql "SELECT * FROM default.my_table"
 
-        duckpond query execute --tenant abc123 --sql "SELECT * FROM catalog.sales" --export results.json
+        duckpond query execute --account abc123 --sql "SELECT * FROM catalog.sales" --export results.json
 
-        duckpond query execute --tenant abc123 --sql "SELECT * FROM catalog.sales" --as-of "2024-01-01"
+        duckpond query execute --account abc123 --sql "SELECT * FROM catalog.sales" --as-of "2024-01-01"
 
-        duckpond query execute --tenant abc123 --sql "SELECT * FROM catalog.sales" --output csv
+        duckpond query execute --account abc123 --sql "SELECT * FROM catalog.sales" --output csv
     """
     try:
         if not sql and not file:
@@ -118,7 +118,7 @@ def execute(
                 print_info("Use ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")
                 raise typer.Exit(1)
 
-        print_info(f"Executing query for tenant: {tenant_id}")
+        print_info(f"Executing query for account: {account_id}")
         if limit:
             print_info(f"Row limit: {limit}")
         if attach_catalog:
@@ -128,13 +128,13 @@ def execute(
             engine = get_engine()
             session_factory = create_session_factory(engine)
             async with get_session(session_factory) as session:
-                manager = TenantManager(session)
-                tenant = await manager.get_tenant(tenant_id)
+                manager = AccountManager(session)
+                account = await manager.get_account(account_id)
 
-                if not tenant:
-                    raise ValueError(f"Tenant not found: {tenant_id}")
+                if not account:
+                    raise ValueError(f"Account not found: {account_id}")
 
-                ducklake = TenantDuckLakeManager(tenant)
+                ducklake = AccountDuckLakeManager(account)
                 executor = QueryExecutor(ducklake)
 
                 exec_format = output_format if output_format != "table" else "json"
@@ -171,7 +171,7 @@ def execute(
 
 @app.command()
 def explain(
-    tenant_id: str = typer.Option(..., "--tenant", "-t", help="Tenant ID"),
+    account_id: str = typer.Option(..., "--account", "-t", help="Account ID"),
     sql: Optional[str] = typer.Option(None, "--sql", "-s", help="SQL query string"),
     file: Optional[Path] = typer.Option(
         None,
@@ -197,9 +197,9 @@ def explain(
     without actually running it.
 
     Examples:
-        duckpond query explain --tenant abc123 --sql "SELECT * FROM catalog.sales"
-        duckpond query explain --tenant abc123 --file query.sql
-        duckpond query explain --tenant abc123 --attach default --sql "SELECT * FROM default.sales"
+        duckpond query explain --account abc123 --sql "SELECT * FROM catalog.sales"
+        duckpond query explain --account abc123 --file query.sql
+        duckpond query explain --account abc123 --attach default --sql "SELECT * FROM default.sales"
     """
     try:
         if not sql and not file:
@@ -211,7 +211,7 @@ def explain(
         else:
             query_sql = sql.strip()
 
-        print_info(f"Explaining query for tenant: {tenant_id}")
+        print_info(f"Explaining query for account: {account_id}")
         if attach_catalog:
             print_info(f"Attaching catalog: {attach_catalog}")
 
@@ -219,13 +219,13 @@ def explain(
             engine = get_engine()
             session_factory = create_session_factory(engine)
             async with get_session(session_factory) as session:
-                manager = TenantManager(session)
-                tenant = await manager.get_tenant(tenant_id)
+                manager = AccountManager(session)
+                account = await manager.get_account(account_id)
 
-                if not tenant:
-                    raise ValueError(f"Tenant not found: {tenant_id}")
+                if not account:
+                    raise ValueError(f"Account not found: {account_id}")
 
-                ducklake = TenantDuckLakeManager(tenant)
+                ducklake = AccountDuckLakeManager(account)
                 executor = QueryExecutor(ducklake)
 
                 plan = await executor.explain_query(

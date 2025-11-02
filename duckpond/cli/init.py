@@ -33,7 +33,7 @@ def init(
     """
     Initialize DuckPond application.
 
-    Creates metadata database, storage directories, and optionally an admin tenant.
+    Creates metadata database, storage directories, and optionally an admin account.
     """
     try:
         settings = get_settings()
@@ -92,7 +92,7 @@ def init(
 
         directories = [
             storage_path,
-            storage_path / "tenants",
+            storage_path / "accounts",
             storage_path / "temp",
         ]
 

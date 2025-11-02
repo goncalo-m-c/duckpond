@@ -1,8 +1,8 @@
 """DuckDB query engine with DuckLake catalog integration."""
 
 from duckpond.query.ducklake import (
-    TenantDuckLakeManager,
-    TenantDuckLakeManagerRegistry,
+    AccountDuckLakeManager,
+    AccountDuckLakeManagerRegistry,
     get_registry,
     shutdown_registry,
 )
@@ -18,8 +18,8 @@ from duckpond.query.validator import (
 
 __all__ = [
     "DuckDBConnectionPool",
-    "TenantDuckLakeManager",
-    "TenantDuckLakeManagerRegistry",
+    "AccountDuckLakeManager",
+    "AccountDuckLakeManagerRegistry",
     "get_registry",
     "shutdown_registry",
     "QueryExecutor",

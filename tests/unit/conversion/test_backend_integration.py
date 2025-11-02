@@ -60,7 +60,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_csv,
             remote_key="data/test.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 
@@ -71,7 +71,7 @@ class TestLocalBackendIntegration:
 
         # Verify remote path
         assert result["remote_path"].endswith(".parquet")
-        assert "test-tenant" in result["remote_path"]
+        assert "test-account" in result["remote_path"]
 
         # Verify metrics
         metrics = result["metrics"]
@@ -90,7 +90,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_json,
             remote_key="data/test.json",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 
@@ -103,7 +103,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_parquet,
             remote_key="data/test.parquet",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 
@@ -117,7 +117,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_csv,
             remote_key="data/test.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=False,
         )
 
@@ -137,7 +137,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_csv,
             remote_key="data/test.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
             conversion_config=config,
         )
@@ -156,7 +156,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_csv,
             remote_key="data/test.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             metadata=metadata,
             convert_to_parquet=True,
         )
@@ -172,13 +172,13 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_csv,
             remote_key="data/test.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 
         # Verify file exists in tables/ directory
         expected_path = (
-            temp_storage / "test-tenant" / "tables" / "data" / "test.parquet"
+            temp_storage / "test-account" / "tables" / "data" / "test.parquet"
         )
         assert expected_path.exists()
 
@@ -190,12 +190,12 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_csv,
             remote_key="data/test.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 
         # Verify original file was removed from uploads/
-        upload_path = temp_storage / "test-tenant" / "uploads" / "data" / "test.csv"
+        upload_path = temp_storage / "test-account" / "uploads" / "data" / "test.csv"
         assert not upload_path.exists()
 
     @pytest.mark.asyncio
@@ -213,7 +213,7 @@ class TestLocalBackendIntegration:
             backend.upload_file(
                 local_path=f,
                 remote_key=f"data/{f.name}",
-                tenant_id="test-tenant",
+                account_id="test-account",
                 convert_to_parquet=True,
             )
             for f in files
@@ -239,7 +239,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=csv_file,
             remote_key="data/large.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 
@@ -258,13 +258,13 @@ class TestLocalBackendIntegration:
         result1 = await backend.upload_file(
             local_path=csv1,
             remote_key="data/test1.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
         result2 = await backend.upload_file(
             local_path=csv2,
             remote_key="data/test2.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 
@@ -287,7 +287,7 @@ class TestLocalBackendIntegration:
             await backend.upload_file(
                 local_path=txt_file,
                 remote_key="data/test.txt",
-                tenant_id="test-tenant",
+                account_id="test-account",
                 convert_to_parquet=True,
             )
 
@@ -297,7 +297,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_csv,
             remote_key="data/test.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 
@@ -311,7 +311,7 @@ class TestLocalBackendIntegration:
         result = await backend.upload_file(
             local_path=sample_csv,
             remote_key="data/test.csv",
-            tenant_id="test-tenant",
+            account_id="test-account",
             convert_to_parquet=True,
         )
 

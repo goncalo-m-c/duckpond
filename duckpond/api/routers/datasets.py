@@ -12,7 +12,7 @@ from typing import Optional
 
 from fastapi import APIRouter, status
 
-from duckpond.api.dependencies import CurrentTenant
+from duckpond.api.dependencies import CurrentAccount
 from duckpond.api.exceptions import ConflictException, NotFoundException
 from duckpond.catalog.manager import create_catalog_manager
 from duckpond.catalog.schemas import (
@@ -33,16 +33,16 @@ router = APIRouter(prefix="/api/v1/datasets", tags=["datasets"])
     summary="List datasets",
 )
 async def list_datasets(
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     dataset_type: Optional[str] = None,
     pattern: Optional[str] = None,
 ):
-    """List all datasets for the authenticated tenant.
+    """List all datasets for the authenticated account.
 
     Supports filtering by dataset type and name pattern.
 
     Args:
-        tenant_id: Authenticated tenant ID
+        account_id: Authenticated account ID
         dataset_type: Filter by type (table, view, external)
         pattern: SQL LIKE pattern for name filtering (e.g., "sales%")
 
@@ -54,7 +54,7 @@ async def list_datasets(
         GET /api/v1/datasets?dataset_type=table
         GET /api/v1/datasets?pattern=sales%
     """
-    catalog = await create_catalog_manager(tenant_id)
+    catalog = await create_catalog_manager(account_id)
 
     try:
         datasets = await catalog.list_datasets(
@@ -74,13 +74,13 @@ async def list_datasets(
 )
 async def get_dataset(
     dataset_name: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ):
     """Get metadata for a specific dataset.
 
     Args:
         dataset_name: Name of the dataset
-        tenant_id: Authenticated tenant ID
+        account_id: Authenticated account ID
 
     Returns:
         Dataset metadata
@@ -91,7 +91,7 @@ async def get_dataset(
     Example:
         GET /api/v1/datasets/sales
     """
-    catalog = await create_catalog_manager(tenant_id)
+    catalog = await create_catalog_manager(account_id)
 
     try:
         dataset = await catalog.get_dataset_metadata(dataset_name)

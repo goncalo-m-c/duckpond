@@ -9,7 +9,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from duckpond.tenants.models import APIKey, Tenant
+from duckpond.accounts.models import APIKey, Account
 
 logger = structlog.get_logger(__name__)
 
@@ -19,15 +19,15 @@ CACHE_TTL = 30
 class CachedAuthResult:
     """Container for cached authentication results with TTL."""
 
-    def __init__(self, tenant: Tenant, api_key: APIKey):
+    def __init__(self, account: Account, api_key: APIKey):
         """
         Initialize cached auth result.
 
         Args:
-            tenant: Tenant model instance
+            account: Account model instance
             api_key: APIKey model instance
         """
-        self.tenant = tenant
+        self.account = account
         self.api_key = api_key
         self.timestamp = time.time()
 
@@ -46,7 +46,7 @@ class CachedAuthResult:
     def __repr__(self) -> str:
         """String representation."""
         return (
-            f"<CachedAuthResult tenant_id={self.tenant.tenant_id} "
+            f"<CachedAuthResult account_id={self.account.account_id} "
             f"age={time.time() - self.timestamp:.1f}s>"
         )
 
@@ -65,7 +65,7 @@ class APIKeyAuthenticator:
     - LRU cache with 1000 entry maximum
     - 30-second TTL for each entry
     - Cache key is the full API key
-    - Cache stores tenant and API key models
+    - Cache stores account and API key models
     """
 
     def __init__(self, cache_size: int = 1000, cache_ttl: int = CACHE_TTL):
@@ -87,9 +87,9 @@ class APIKeyAuthenticator:
 
     async def authenticate(
         self, api_key: str, session: AsyncSession
-    ) -> tuple[Tenant, APIKey] | None:
+    ) -> tuple[Account, APIKey] | None:
         """
-        Authenticate API key and return tenant and API key models.
+        Authenticate API key and return account and API key models.
 
         This method:
         1. Checks cache for valid entry
@@ -102,27 +102,27 @@ class APIKeyAuthenticator:
             session: Database session
 
         Returns:
-            Tuple of (Tenant, APIKey) if authenticated, None otherwise
+            Tuple of (Account, APIKey) if authenticated, None otherwise
         """
         cached = self._get_from_cache(api_key)
         if cached:
             logger.debug(
                 "api_key_cache_hit",
-                tenant_id=cached.tenant.tenant_id,
+                account_id=cached.account.account_id,
                 age=time.time() - cached.timestamp,
             )
-            return (cached.tenant, cached.api_key)
+            return (cached.account, cached.api_key)
 
         logger.debug("api_key_cache_miss", key_prefix=api_key[:8])
 
         result = await self._authenticate_from_db(api_key, session)
 
         if result:
-            tenant, db_key = result
-            self._put_in_cache(api_key, tenant, db_key)
+            account, db_key = result
+            self._put_in_cache(api_key, account, db_key)
             logger.info(
                 "authentication_success",
-                tenant_id=tenant.tenant_id,
+                account_id=account.account_id,
                 key_id=db_key.key_id,
             )
             return result
@@ -132,7 +132,7 @@ class APIKeyAuthenticator:
 
     async def _authenticate_from_db(
         self, api_key: str, session: AsyncSession
-    ) -> tuple[Tenant, APIKey] | None:
+    ) -> tuple[Account, APIKey] | None:
         """
         Authenticate API key against database.
 
@@ -141,7 +141,7 @@ class APIKeyAuthenticator:
             session: Database session
 
         Returns:
-            Tuple of (Tenant, APIKey) if authenticated, None otherwise
+            Tuple of (Account, APIKey) if authenticated, None otherwise
         """
         try:
             key_prefix = api_key[:8]
@@ -157,25 +157,25 @@ class APIKeyAuthenticator:
                 logger.warning(
                     "key_hash_mismatch",
                     key_id=db_key.key_id,
-                    tenant_id=db_key.tenant_id,
+                    account_id=db_key.account_id,
                 )
                 return None
 
-            tenant = db_key.tenant
-            if not tenant:
-                stmt = select(Tenant).where(Tenant.tenant_id == db_key.tenant_id)
+            account = db_key.account
+            if not account:
+                stmt = select(Account).where(Account.account_id == db_key.account_id)
                 result = await session.execute(stmt)
-                tenant = result.scalar_one_or_none()
+                account = result.scalar_one_or_none()
 
-                if not tenant:
+                if not account:
                     logger.error(
-                        "tenant_not_found",
-                        tenant_id=db_key.tenant_id,
+                        "account_not_found",
+                        account_id=db_key.account_id,
                         key_id=db_key.key_id,
                     )
                     return None
 
-            return (tenant, db_key)
+            return (account, db_key)
 
         except Exception as e:
             logger.error("authentication_error", error=str(e), exc_info=True)
@@ -197,31 +197,31 @@ class APIKeyAuthenticator:
             return cached
 
         if cached:
-            logger.debug("cache_entry_expired", tenant_id=cached.tenant.tenant_id)
+            logger.debug("cache_entry_expired", account_id=cached.account.account_id)
             del self._cache[api_key]
 
         return None
 
-    def _put_in_cache(self, api_key: str, tenant: Tenant, db_key: APIKey) -> None:
+    def _put_in_cache(self, api_key: str, account: Account, db_key: APIKey) -> None:
         """
         Store authentication result in cache with LRU eviction.
 
         Args:
             api_key: API key
-            tenant: Tenant model
+            account: Account model
             db_key: APIKey model
         """
         if len(self._cache) >= self.cache_size:
             oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k].timestamp)
             logger.debug(
                 "cache_eviction",
-                evicted_tenant=self._cache[oldest_key].tenant.tenant_id,
+                evicted_account=self._cache[oldest_key].account.account_id,
             )
             del self._cache[oldest_key]
 
-        self._cache[api_key] = CachedAuthResult(tenant, db_key)
+        self._cache[api_key] = CachedAuthResult(account, db_key)
         logger.debug(
-            "cache_entry_added", tenant_id=tenant.tenant_id, cache_size=len(self._cache)
+            "cache_entry_added", account_id=account.account_id, cache_size=len(self._cache)
         )
 
     def invalidate(self, api_key: str) -> None:
@@ -234,23 +234,23 @@ class APIKeyAuthenticator:
             api_key: API key to invalidate
         """
         if api_key in self._cache:
-            tenant_id = self._cache[api_key].tenant.tenant_id
+            account_id = self._cache[api_key].account.account_id
             del self._cache[api_key]
-            logger.info("cache_invalidated", tenant_id=tenant_id)
+            logger.info("cache_invalidated", account_id=account_id)
 
-    def invalidate_tenant(self, tenant_id: str) -> None:
+    def invalidate_account(self, account_id: str) -> None:
         """
-        Invalidate all cache entries for a tenant.
+        Invalidate all cache entries for a account.
 
-        Use this when tenant is deleted or all keys are revoked.
+        Use this when account is deleted or all keys are revoked.
 
         Args:
-            tenant_id: Tenant ID to invalidate
+            account_id: Account ID to invalidate
         """
         keys_to_remove = [
             key
             for key, cached in self._cache.items()
-            if cached.tenant.tenant_id == tenant_id
+            if cached.account.account_id == account_id
         ]
 
         for key in keys_to_remove:
@@ -258,8 +258,8 @@ class APIKeyAuthenticator:
 
         if keys_to_remove:
             logger.info(
-                "tenant_cache_invalidated",
-                tenant_id=tenant_id,
+                "account_cache_invalidated",
+                account_id=account_id,
                 keys_removed=len(keys_to_remove),
             )
 

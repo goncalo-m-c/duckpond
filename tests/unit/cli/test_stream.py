@@ -42,8 +42,8 @@ class TestStreamIngest:
                     "stream",
                     "ingest",
                     str(ipc_file),
-                    "--tenant",
-                    "test-tenant",
+                    "--account",
+                    "test-account",
                     "--stream",
                     "test-stream",
                     "--no-progress",
@@ -53,7 +53,7 @@ class TestStreamIngest:
             assert result.exit_code == 0
             assert "Starting Arrow IPC ingestion" in result.stdout
             assert "test-stream" in result.stdout
-            assert "test-tenant" in result.stdout
+            assert "test-account" in result.stdout
             assert "Ingestion completed successfully" in result.stdout
 
     def test_ingest_with_custom_options(self, tmp_path):
@@ -81,8 +81,8 @@ class TestStreamIngest:
                     "stream",
                     "ingest",
                     str(ipc_file),
-                    "--tenant",
-                    "test-tenant",
+                    "--account",
+                    "test-account",
                     "--stream",
                     "test-stream",
                     "--batch-flush",
@@ -130,8 +130,8 @@ class TestStreamIngest:
                     "stream",
                     "ingest",
                     str(ipc_file),
-                    "--tenant",
-                    "test-tenant",
+                    "--account",
+                    "test-account",
                     "--stream",
                     "test-stream",
                     "--storage",
@@ -152,8 +152,8 @@ class TestStreamIngest:
                 "stream",
                 "ingest",
                 "/nonexistent/file.arrow",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--stream",
                 "test-stream",
             ],
@@ -186,8 +186,8 @@ class TestStreamIngest:
                     "stream",
                     "ingest",
                     str(ipc_file),
-                    "--tenant",
-                    "test-tenant",
+                    "--account",
+                    "test-account",
                     "--stream",
                     "test-stream",
                     "--no-progress",
@@ -236,8 +236,8 @@ class TestStreamIngest:
                         "stream",
                         "ingest",
                         str(ipc_file),
-                        "--tenant",
-                        "test-tenant",
+                        "--account",
+                        "test-account",
                         "--stream",
                         "test-stream",
                         "--no-progress",
@@ -266,8 +266,8 @@ class TestStreamIngest:
                     "stream",
                     "ingest",
                     str(ipc_file),
-                    "--tenant",
-                    "test-tenant",
+                    "--account",
+                    "test-account",
                     "--stream",
                     "test-stream",
                     "--no-progress",
@@ -479,7 +479,7 @@ class TestStreamHelp:
 
         assert result.exit_code == 0
         assert "Ingest Arrow IPC stream file" in result.stdout
-        assert "--tenant" in result.stdout
+        assert "--account" in result.stdout
         assert "--stream" in result.stdout
         assert "--batch-flush" in result.stdout
         assert "--buffer-size" in result.stdout

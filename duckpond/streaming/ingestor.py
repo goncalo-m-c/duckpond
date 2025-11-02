@@ -34,7 +34,7 @@ class StreamingIngestor:
     - Written files are registered with the catalog
 
     Example:
-        catalog = await create_catalog_manager(tenant_id, db_path)
+        catalog = await create_catalog_manager(account_id, db_path)
         buffer_manager = BufferManager(
             max_buffer_size_bytes=100 * 1024 * 1024,
             max_queue_depth=100
@@ -43,7 +43,7 @@ class StreamingIngestor:
         ingestor = StreamingIngestor(catalog, buffer_manager)
 
         metrics = await ingestor.ingest_stream(
-            tenant_id=UUID("..."),
+            account_id=UUID("..."),
             dataset_name="sales",
             ipc_stream_path=Path("data.arrow"),
             storage_root=Path("/data/warehouse/sales"),
@@ -70,7 +70,7 @@ class StreamingIngestor:
 
     async def ingest_stream(
         self,
-        tenant_id: Union[str, UUID],
+        account_id: Union[str, UUID],
         stream_name: str,
         ipc_stream_path: Path,
         storage_root: Path,
@@ -80,7 +80,7 @@ class StreamingIngestor:
         """Ingest Arrow IPC stream into stream.
 
         Args:
-            tenant_id: Tenant UUID or string
+            account_id: Account UUID or string
             stream_name: Target stream name
             ipc_stream_path: Path to Arrow IPC stream file
             storage_root: Root directory for Parquet files
@@ -111,7 +111,7 @@ class StreamingIngestor:
         handler = ArrowIPCHandler(expected_schema)
 
         consumer_context = {
-            "tenant_id": tenant_id,
+            "account_id": account_id,
             "stream_name": stream_name,
             "storage_root": storage_root,
             "batch_flush_count": batch_flush_count,
@@ -188,7 +188,7 @@ class StreamingIngestor:
         batch_count = 0
         temp_batches = []
 
-        tenant_id = context["tenant_id"]
+        account_id = context["account_id"]
         stream_name = context["stream_name"]
         storage_root = context["storage_root"]
         batch_flush_count = context["batch_flush_count"]
@@ -204,7 +204,7 @@ class StreamingIngestor:
 
             if batch_count >= batch_flush_count:
                 await self._flush_batches(
-                    tenant_id,
+                    account_id,
                     stream_name,
                     storage_root,
                     temp_batches,
@@ -215,7 +215,7 @@ class StreamingIngestor:
 
         if temp_batches:
             await self._flush_batches(
-                tenant_id,
+                account_id,
                 stream_name,
                 storage_root,
                 temp_batches,
@@ -224,7 +224,7 @@ class StreamingIngestor:
 
     async def _flush_batches(
         self,
-        tenant_id: Union[str, UUID],
+        account_id: Union[str, UUID],
         stream_name: str,
         storage_root: Path,
         batches: list[pa.RecordBatch],
@@ -232,7 +232,7 @@ class StreamingIngestor:
         """Write batches to Parquet file and register with catalog.
 
         Args:
-            tenant_id: Tenant UUID or string
+            account_id: Account UUID or string
             stream_name: Dataset name
             storage_root: Root directory for Parquet files
             batches: List of record batches to write

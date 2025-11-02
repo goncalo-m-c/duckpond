@@ -142,18 +142,18 @@ class CORSHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-class TenantContextMiddleware(BaseHTTPMiddleware):
-    """Add tenant context to request state.
+class AccountContextMiddleware(BaseHTTPMiddleware):
+    """Add account context to request state.
 
-    Extracts tenant_id from authenticated request and stores it
+    Extracts account_id from authenticated request and stores it
     in request.state for use by downstream handlers.
 
     Example:
-        app.add_middleware(TenantContextMiddleware)
+        app.add_middleware(AccountContextMiddleware)
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request and add tenant context.
+        """Process request and add account context.
 
         Args:
             request: Incoming HTTP request
@@ -162,8 +162,8 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         Returns:
             HTTP response
         """
-        if not hasattr(request.state, "tenant_id"):
-            request.state.tenant_id = None
+        if not hasattr(request.state, "account_id"):
+            request.state.account_id = None
 
         response = await call_next(request)
         return response

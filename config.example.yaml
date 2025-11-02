@@ -74,15 +74,15 @@ duckdb:
   pool_size: 10
 
 # Resource Limits
-# Configure tenant resource quotas and limits
+# Configure account resource quotas and limits
 limits:
   # Maximum file upload size in megabytes
   max_file_size_mb: 1000
 
-  # Default storage quota per tenant in gigabytes
+  # Default storage quota per account in gigabytes
   default_max_storage_gb: 100
 
-  # Default query memory limit per tenant in gigabytes
+  # Default query memory limit per account in gigabytes
   default_max_query_memory_gb: 4
 
   # API key cache TTL in seconds

@@ -64,7 +64,7 @@ class QueryMetrics:
     used for performance monitoring, debugging, and optimization.
 
     Attributes:
-        tenant_id: Tenant executing the query
+        account_id: Account executing the query
         query_hash: Hash of query for deduplication
         execution_time_seconds: Total execution time
         row_count: Number of rows returned
@@ -74,7 +74,7 @@ class QueryMetrics:
         memory_used_mb: Approximate memory used (if available)
     """
 
-    tenant_id: str
+    account_id: str
     query_hash: str
     execution_time_seconds: float
     row_count: int
@@ -86,7 +86,7 @@ class QueryMetrics:
     def to_dict(self) -> dict:
         """Convert metrics to dictionary for logging."""
         return {
-            "tenant_id": self.tenant_id,
+            "account_id": self.account_id,
             "query_hash": self.query_hash,
             "execution_time_seconds": self.execution_time_seconds,
             "row_count": self.row_count,

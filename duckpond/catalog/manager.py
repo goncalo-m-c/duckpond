@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class DuckLakeCatalogManager:
     """
-    Manages DuckLake catalog operations for a tenant.
+    Manages DuckLake catalog operations for a account.
 
     This class provides:
     - Dataset registration and metadata management
@@ -45,7 +45,7 @@ class DuckLakeCatalogManager:
     since DuckDB connections are synchronous.
 
     Usage:
-        manager = DuckLakeCatalogManager(conn, tenant_id, catalog_name)
+        manager = DuckLakeCatalogManager(conn, account_id, catalog_name)
 
         dataset = await manager.create_dataset(CreateDatasetRequest(...))
 
@@ -57,7 +57,7 @@ class DuckLakeCatalogManager:
     def __init__(
         self,
         conn: duckdb.DuckDBPyConnection,
-        tenant_id: str,
+        account_id: str,
         catalog_url: str,
         catalog_name: str = "catalog",
     ) -> None:
@@ -66,17 +66,17 @@ class DuckLakeCatalogManager:
 
         Args:
             conn: DuckDB connection with DuckLake catalog attached
-            tenant_id: Tenant ID for logging and tracking
+            account_id: Account ID for logging and tracking
             catalog_name: DuckLake catalog name (default: "catalog")
         """
         self.conn = conn
-        self.tenant_id = tenant_id
+        self.account_id = account_id
         self.catalog_name = catalog_name
         self.catalog_url = catalog_url
 
         logger.info(
-            f"Initialized DuckLakeCatalogManager for tenant {tenant_id}",
-            extra={"tenant_id": tenant_id, "catalog_name": catalog_name},
+            f"Initialized DuckLakeCatalogManager for account {account_id}",
+            extra={"account_id": account_id, "catalog_name": catalog_name},
         )
 
     def _get_full_table_name(self, dataset_name: str) -> str:
@@ -125,9 +125,9 @@ class DuckLakeCatalogManager:
             dataset = await manager.create_dataset(request)
         """
         logger.info(
-            f"Creating dataset {request.name} for tenant {self.tenant_id}",
+            f"Creating dataset {request.name} for account {self.account_id}",
             extra={
-                "tenant_id": self.tenant_id,
+                "account_id": self.account_id,
                 "dataset_name": request.name,
                 "dataset_type": request.type.value,
             },
@@ -149,9 +149,9 @@ class DuckLakeCatalogManager:
             metadata = await self.get_dataset_metadata(request.name)
 
             logger.info(
-                f"Created dataset {request.name} for tenant {self.tenant_id}",
+                f"Created dataset {request.name} for account {self.account_id}",
                 extra={
-                    "tenant_id": self.tenant_id,
+                    "account_id": self.account_id,
                     "dataset_name": request.name,
                     "row_count": metadata.row_count,
                 },
@@ -162,7 +162,7 @@ class DuckLakeCatalogManager:
         except Exception as e:
             logger.error(
                 f"Failed to create dataset {request.name}: {e}",
-                extra={"tenant_id": self.tenant_id, "dataset_name": request.name},
+                extra={"account_id": self.account_id, "dataset_name": request.name},
                 exc_info=True,
             )
             raise CatalogError(f"Failed to create dataset {request.name}: {e}")
@@ -182,7 +182,7 @@ class DuckLakeCatalogManager:
         """
         logger.debug(
             f"Getting metadata for dataset {dataset_name}",
-            extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+            extra={"account_id": self.account_id, "dataset_name": dataset_name},
         )
 
         try:
@@ -217,7 +217,7 @@ class DuckLakeCatalogManager:
         except Exception as e:
             logger.error(
                 f"Failed to get metadata for dataset {dataset_name}: {e}",
-                extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+                extra={"account_id": self.account_id, "dataset_name": dataset_name},
                 exc_info=True,
             )
             raise CatalogError(f"Failed to get dataset metadata: {e}")
@@ -238,9 +238,9 @@ class DuckLakeCatalogManager:
             List of dataset metadata
         """
         logger.debug(
-            f"Listing datasets for tenant {self.tenant_id}",
+            f"Listing datasets for account {self.account_id}",
             extra={
-                "tenant_id": self.tenant_id,
+                "account_id": self.account_id,
                 "dataset_type": dataset_type.value if dataset_type else None,
                 "pattern": pattern,
             },
@@ -279,7 +279,7 @@ class DuckLakeCatalogManager:
                 except Exception as e:
                     logger.warning(
                         f"Failed to get metadata for dataset {name}: {e}",
-                        extra={"tenant_id": self.tenant_id, "dataset_name": name},
+                        extra={"account_id": self.account_id, "dataset_name": name},
                     )
 
             return DatasetListResponse(datasets=datasets, total=len(datasets))
@@ -287,7 +287,7 @@ class DuckLakeCatalogManager:
         except Exception as e:
             logger.error(
                 f"Failed to list datasets: {e}",
-                extra={"tenant_id": self.tenant_id},
+                extra={"account_id": self.account_id},
                 exc_info=True,
             )
             raise CatalogError(f"Failed to list datasets: {e}")
@@ -314,8 +314,8 @@ class DuckLakeCatalogManager:
             DatasetNotFoundError: If dataset does not exist
         """
         logger.info(
-            f"Updating dataset {dataset_name} for tenant {self.tenant_id}",
-            extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+            f"Updating dataset {dataset_name} for account {self.account_id}",
+            extra={"account_id": self.account_id, "dataset_name": dataset_name},
         )
 
         exists = await self._dataset_exists(dataset_name)
@@ -336,8 +336,8 @@ class DuckLakeCatalogManager:
             DatasetNotFoundError: If dataset does not exist and if_exists=False
         """
         logger.info(
-            f"Deleting dataset {dataset_name} for tenant {self.tenant_id}",
-            extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+            f"Deleting dataset {dataset_name} for account {self.account_id}",
+            extra={"account_id": self.account_id, "dataset_name": dataset_name},
         )
 
         try:
@@ -361,8 +361,8 @@ class DuckLakeCatalogManager:
                 pass
 
             logger.info(
-                f"Deleted dataset {dataset_name} for tenant {self.tenant_id}",
-                extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+                f"Deleted dataset {dataset_name} for account {self.account_id}",
+                extra={"account_id": self.account_id, "dataset_name": dataset_name},
             )
 
         except DatasetNotFoundError:
@@ -370,7 +370,7 @@ class DuckLakeCatalogManager:
         except Exception as e:
             logger.error(
                 f"Failed to delete dataset {dataset_name}: {e}",
-                extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+                extra={"account_id": self.account_id, "dataset_name": dataset_name},
                 exc_info=True,
             )
             raise CatalogError(f"Failed to delete dataset: {e}")
@@ -397,7 +397,7 @@ class DuckLakeCatalogManager:
         logger.info(
             f"Evolving schema for dataset {dataset_name}",
             extra={
-                "tenant_id": self.tenant_id,
+                "account_id": self.account_id,
                 "dataset_name": dataset_name,
                 "add_columns": len(request.add_columns),
                 "drop_columns": len(request.drop_columns),
@@ -434,12 +434,12 @@ class DuckLakeCatalogManager:
             for col in request.alter_columns:
                 logger.warning(
                     f"ALTER COLUMN not fully supported, skipping {col.name}",
-                    extra={"tenant_id": self.tenant_id, "column": col.name},
+                    extra={"account_id": self.account_id, "column": col.name},
                 )
 
             logger.info(
                 f"Schema evolved for dataset {dataset_name}",
-                extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+                extra={"account_id": self.account_id, "dataset_name": dataset_name},
             )
 
             return await self.get_dataset_metadata(dataset_name)
@@ -449,7 +449,7 @@ class DuckLakeCatalogManager:
         except Exception as e:
             logger.error(
                 f"Failed to evolve schema for dataset {dataset_name}: {e}",
-                extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+                extra={"account_id": self.account_id, "dataset_name": dataset_name},
                 exc_info=True,
             )
             raise SchemaIncompatibleError(f"Schema evolution failed: {e}")
@@ -469,7 +469,7 @@ class DuckLakeCatalogManager:
         """
         logger.debug(
             f"Getting statistics for table {dataset_name}",
-            extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+            extra={"account_id": self.account_id, "dataset_name": dataset_name},
         )
 
         try:
@@ -493,7 +493,7 @@ class DuckLakeCatalogManager:
         except Exception as e:
             logger.error(
                 f"Failed to get statistics for table {dataset_name}: {e}",
-                extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+                extra={"account_id": self.account_id, "dataset_name": dataset_name},
                 exc_info=True,
             )
             raise CatalogError(f"Failed to get table statistics: {e}")
@@ -513,7 +513,7 @@ class DuckLakeCatalogManager:
         """
         logger.debug(
             f"Listing partitions for table {dataset_name}",
-            extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+            extra={"account_id": self.account_id, "dataset_name": dataset_name},
         )
 
         return []
@@ -547,7 +547,7 @@ class DuckLakeCatalogManager:
         logger.info(
             f"Registering Parquet file as view {dataset_name}",
             extra={
-                "tenant_id": self.tenant_id,
+                "account_id": self.account_id,
                 "dataset_name": dataset_name,
                 "file_path": file_path,
                 "partition_values": partition_values,
@@ -559,7 +559,7 @@ class DuckLakeCatalogManager:
             if exists:
                 logger.warning(
                     f"Dataset {dataset_name} already exists, dropping and recreating",
-                    extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+                    extra={"account_id": self.account_id, "dataset_name": dataset_name},
                 )
                 await self.delete_dataset(dataset_name, if_exists=True)
 
@@ -575,7 +575,7 @@ class DuckLakeCatalogManager:
             logger.info(
                 f"Registered Parquet file as view {dataset_name}",
                 extra={
-                    "tenant_id": self.tenant_id,
+                    "account_id": self.account_id,
                     "dataset_name": dataset_name,
                     "file_path": file_path,
                 },
@@ -585,7 +585,7 @@ class DuckLakeCatalogManager:
             logger.error(
                 f"Failed to register Parquet file: {e}",
                 extra={
-                    "tenant_id": self.tenant_id,
+                    "account_id": self.account_id,
                     "dataset_name": dataset_name,
                     "file_path": file_path,
                 },
@@ -630,7 +630,7 @@ class DuckLakeCatalogManager:
         logger.info(
             f"Querying dataset {dataset_name} at timestamp {timestamp}",
             extra={
-                "tenant_id": self.tenant_id,
+                "account_id": self.account_id,
                 "dataset_name": dataset_name,
                 "timestamp": timestamp.isoformat(),
             },
@@ -660,7 +660,7 @@ class DuckLakeCatalogManager:
             logger.info(
                 f"Time travel query returned {len(rows)} rows",
                 extra={
-                    "tenant_id": self.tenant_id,
+                    "account_id": self.account_id,
                     "dataset_name": dataset_name,
                     "row_count": len(rows),
                 },
@@ -674,7 +674,7 @@ class DuckLakeCatalogManager:
             logger.error(
                 f"Time travel query failed: {e}",
                 extra={
-                    "tenant_id": self.tenant_id,
+                    "account_id": self.account_id,
                     "dataset_name": dataset_name,
                     "timestamp": timestamp.isoformat(),
                 },
@@ -707,7 +707,7 @@ class DuckLakeCatalogManager:
         """
         logger.info(
             f"Listing snapshots for dataset {dataset_name}",
-            extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+            extra={"account_id": self.account_id, "dataset_name": dataset_name},
         )
 
         def _list() -> list[dict]:
@@ -765,7 +765,7 @@ class DuckLakeCatalogManager:
         except Exception as e:
             logger.error(
                 f"Failed to list snapshots: {e}",
-                extra={"tenant_id": self.tenant_id, "dataset_name": dataset_name},
+                extra={"account_id": self.account_id, "dataset_name": dataset_name},
                 exc_info=True,
             )
             raise CatalogError(f"Failed to list snapshots: {e}")
@@ -869,7 +869,7 @@ class DuckLakeCatalogManager:
 
 
 async def create_catalog_manager(
-    tenant_id: str,
+    account_id: str,
     catalog_name: str = "default",
     settings=None,
 ) -> DuckLakeCatalogManager:
@@ -877,10 +877,10 @@ async def create_catalog_manager(
     Create a DuckLakeCatalogManager with proper connection setup.
 
     This helper function creates a DuckDB connection, loads necessary extensions,
-    and attaches the DuckLake catalog for the specified tenant.
+    and attaches the DuckLake catalog for the specified account.
 
     Args:
-        tenant_id: Tenant ID
+        account_id: Account ID
         catalog_name: Name of the catalog (default: "default")
         settings: DuckPond settings (uses get_settings() if not provided)
 
@@ -888,7 +888,7 @@ async def create_catalog_manager(
         Initialized DuckLakeCatalogManager
 
     Example:
-        async with create_catalog_manager("tenant-123") as manager:
+        async with create_catalog_manager("account-123") as manager:
             datasets = await manager.list_datasets()
     """
     import duckdb
@@ -928,18 +928,18 @@ async def create_catalog_manager(
                 conn.execute(f"SET s3_region='{settings.s3_region}'")
 
         if settings.default_storage_backend == "s3":
-            data_path = f"s3://{settings.s3_bucket}/tenants/{tenant_id}/tables/"
+            data_path = f"s3://{settings.s3_bucket}/accounts/{account_id}/tables/"
         else:
-            local_storage_path = Path(settings.local_storage_path) / "tenants"
-            data_path = str(local_storage_path / tenant_id / "catalogs")
+            local_storage_path = Path(settings.local_storage_path) / "accounts"
+            data_path = str(local_storage_path / account_id / "catalogs")
 
-        tenant_catalog_dir = Path(settings.local_storage_path) / "tenants" / tenant_id
-        tenant_catalog_dir.mkdir(parents=True, exist_ok=True)
+        account_catalog_dir = Path(settings.local_storage_path) / "accounts" / account_id
+        account_catalog_dir.mkdir(parents=True, exist_ok=True)
 
-        catalogs_dir = tenant_catalog_dir / "catalogs"
+        catalogs_dir = account_catalog_dir / "catalogs"
         catalogs_dir.mkdir(parents=True, exist_ok=True)
 
-        catalog_sqlite_path = tenant_catalog_dir / f"{catalog_name}_catalog.sqlite"
+        catalog_sqlite_path = account_catalog_dir / f"{catalog_name}_catalog.sqlite"
 
         conn.execute(f"""
             ATTACH 'ducklake:sqlite:{catalog_sqlite_path}' AS "{catalog_name}"
@@ -952,7 +952,7 @@ async def create_catalog_manager(
 
     return DuckLakeCatalogManager(
         conn=conn,
-        tenant_id=tenant_id,
+        account_id=account_id,
         catalog_url=catalog_sqlite_path,
         catalog_name=catalog_name,
     )

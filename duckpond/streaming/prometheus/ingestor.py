@@ -32,7 +32,7 @@ class PrometheusStreamingIngestor:
     4. Register with catalog
 
     Example:
-        async with create_catalog_manager(tenant_id) as catalog:
+        async with create_catalog_manager(account_id) as catalog:
             buffer_manager = BufferManager(
                 max_buffer_size_bytes=100 * 1024 * 1024,
                 max_queue_depth=100
@@ -41,7 +41,7 @@ class PrometheusStreamingIngestor:
             ingestor = PrometheusStreamingIngestor(catalog, buffer_manager)
 
             metrics = await ingestor.ingest_metrics(
-                tenant_id=UUID("..."),
+                account_id=UUID("..."),
                 dataset_name="prometheus_metrics",
                 compressed_data=request_body
             )
@@ -70,7 +70,7 @@ class PrometheusStreamingIngestor:
 
     async def ingest_metrics(
         self,
-        tenant_id: UUID,
+        account_id: UUID,
         dataset_name: str,
         compressed_data: bytes,
         batch_size: int = 10000,
@@ -85,7 +85,7 @@ class PrometheusStreamingIngestor:
         4. Stream IPC file to Parquet via StreamingIngestor
 
         Args:
-            tenant_id: Tenant UUID
+            account_id: Account UUID
             dataset_name: Target dataset name
             compressed_data: Snappy-compressed Protobuf WriteRequest
             batch_size: Batch size for conversion (default: 10000)
@@ -109,7 +109,7 @@ class PrometheusStreamingIngestor:
         Example:
             >>> ingestor = PrometheusStreamingIngestor(catalog, buffer_manager)
             >>> metrics = await ingestor.ingest_metrics(
-            ...     tenant_id=uuid.uuid4(),
+            ...     account_id=uuid.uuid4(),
             ...     dataset_name="metrics",
             ...     compressed_data=request_body
             ... )
@@ -118,7 +118,7 @@ class PrometheusStreamingIngestor:
         start_time = datetime.now(timezone.utc)
 
         logger.info(
-            f"Starting Prometheus ingestion: tenant={tenant_id}, "
+            f"Starting Prometheus ingestion: account={account_id}, "
             f"dataset={dataset_name}, size={len(compressed_data)} bytes"
         )
 
@@ -184,8 +184,8 @@ class PrometheusStreamingIngestor:
                 settings = get_settings()
                 storage_root = (
                     Path(settings.storage_path)
-                    / "tenants"
-                    / str(tenant_id)
+                    / "accounts"
+                    / str(account_id)
                     / "datasets"
                     / dataset_name
                 )
@@ -193,7 +193,7 @@ class PrometheusStreamingIngestor:
             streaming_ingestor = StreamingIngestor(self.catalog, self.buffer_manager)
 
             ingest_metrics = await streaming_ingestor.ingest_stream(
-                tenant_id=tenant_id,
+                account_id=account_id,
                 dataset_name=dataset_name,
                 ipc_stream_path=tmp_path,
                 storage_root=storage_root,
@@ -252,7 +252,7 @@ class PrometheusStreamingIngestor:
 
     async def ingest_metrics_direct(
         self,
-        tenant_id: UUID,
+        account_id: UUID,
         dataset_name: str,
         compressed_data: bytes,
         batch_size: int = 10000,
@@ -266,7 +266,7 @@ class PrometheusStreamingIngestor:
         to minimize I/O and have a separate consumer processing the buffer.
 
         Args:
-            tenant_id: Tenant UUID
+            account_id: Account UUID
             dataset_name: Target dataset name
             compressed_data: Snappy-compressed Protobuf WriteRequest
             batch_size: Batch size for conversion (default: 10000)
@@ -283,7 +283,7 @@ class PrometheusStreamingIngestor:
         Example:
             >>>
             >>> metrics = await ingestor.ingest_metrics_direct(
-            ...     tenant_id=uuid.uuid4(),
+            ...     account_id=uuid.uuid4(),
             ...     dataset_name="metrics",
             ...     compressed_data=request_body
             ... )
@@ -291,7 +291,7 @@ class PrometheusStreamingIngestor:
         start_time = datetime.now(timezone.utc)
 
         logger.info(
-            f"Starting direct Prometheus ingestion: tenant={tenant_id}, "
+            f"Starting direct Prometheus ingestion: account={account_id}, "
             f"dataset={dataset_name}"
         )
 

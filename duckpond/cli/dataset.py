@@ -28,9 +28,9 @@ logger = get_logger(__name__)
 
 @app.command()
 def list(
-    tenant: str = typer.Option(..., "--tenant", "-t", help="Tenant ID"),
+    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
 ) -> None:
-    """List all datasets for a tenant (both files in storage and tables in catalog)."""
+    """List all datasets for a account (both files in storage and tables in catalog)."""
 
     async def _list() -> None:
         try:
@@ -44,14 +44,14 @@ def list(
                     size /= 1024.0
                 return f"{size:.1f} PB"
 
-            catalog_manager = await create_catalog_manager(tenant, settings=settings)
+            catalog_manager = await create_catalog_manager(account, settings=settings)
             response = await catalog_manager.list_datasets()
             catalog_datasets = {ds.name: ds for ds in response.datasets}
 
             from duckpond.storage import get_storage_backend
 
             if settings.default_storage_backend == "local":
-                storage_path = Path(settings.local_storage_path) / "tenants"
+                storage_path = Path(settings.local_storage_path) / "accounts"
                 storage_backend = get_storage_backend(
                     backend_type="local", config={"path": str(storage_path)}
                 )
@@ -61,7 +61,7 @@ def list(
                 )
 
             tables_files = await storage_backend.list_files(
-                prefix="tables", tenant_id=tenant, recursive=True
+                prefix="tables", account_id=account, recursive=True
             )
 
             storage_datasets = {}
@@ -81,7 +81,7 @@ def list(
 
                         try:
                             file_size = await storage_backend.get_file_size(
-                                file_path, tenant
+                                file_path, account
                             )
                             storage_datasets[dataset_name]["total_size"] += file_size
                         except:
@@ -123,7 +123,7 @@ def list(
                     }
 
             if not all_datasets:
-                print_warning(f"No datasets found for tenant '{tenant}'")
+                print_warning(f"No datasets found for account '{account}'")
                 return
 
             table_data = []
@@ -144,7 +144,7 @@ def list(
 
             print_table(
                 table_data,
-                title=f"Datasets for tenant '{tenant}'",
+                title=f"Datasets for account '{account}'",
                 columns=[
                     "Name",
                     "Type",
@@ -174,19 +174,19 @@ def list(
 @app.command()
 def get(
     dataset_name: str = typer.Argument(..., help="Dataset name"),
-    tenant: str = typer.Option(..., "--tenant", "-t", help="Tenant ID"),
+    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
 ) -> None:
     """Get detailed information about a dataset."""
 
     async def _get() -> None:
         try:
             settings = get_settings()
-            catalog_manager = await create_catalog_manager(tenant, settings=settings)
+            catalog_manager = await create_catalog_manager(account, settings=settings)
 
             metadata = await catalog_manager.get_dataset_metadata(dataset_name)
 
             if not metadata:
-                print_error(f"Dataset '{dataset_name}' not found for tenant '{tenant}'")
+                print_error(f"Dataset '{dataset_name}' not found for account '{account}'")
                 raise typer.Exit(1)
 
             def _format_size(size_bytes: int) -> str:
@@ -252,7 +252,7 @@ def get(
 @app.command()
 def delete(
     dataset_name: str = typer.Argument(..., help="Dataset name"),
-    tenant: str = typer.Option(..., "--tenant", "-t", help="Tenant ID"),
+    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ) -> None:
     """Delete a dataset."""
@@ -260,7 +260,7 @@ def delete(
     async def _delete() -> None:
         try:
             settings = get_settings()
-            catalog_manager = await create_catalog_manager(tenant, settings=settings)
+            catalog_manager = await create_catalog_manager(account, settings=settings)
 
             if not force:
                 if not sys.stdin.isatty():
@@ -270,7 +270,7 @@ def delete(
                     raise typer.Exit(1)
 
                 confirmed = confirm(
-                    f"Are you sure you want to delete dataset '{dataset_name}' from tenant '{tenant}'?",
+                    f"Are you sure you want to delete dataset '{dataset_name}' from account '{account}'?",
                     default=False,
                 )
 
@@ -279,7 +279,7 @@ def delete(
                     raise typer.Exit(0)
 
             await catalog_manager.delete_dataset(dataset_name)
-            print_success(f"Deleted dataset '{dataset_name}' from tenant '{tenant}'")
+            print_success(f"Deleted dataset '{dataset_name}' from account '{account}'")
 
         except Exception as e:
             logger.error(f"Failed to delete dataset: {e}")
@@ -300,7 +300,7 @@ def upload(
         dir_okay=False,
         readable=True,
     ),
-    tenant: str = typer.Option(..., "--tenant", "-t", help="Tenant ID"),
+    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
     catalog: bool = typer.Option(False, "--catalog", "-c", help="Register in catalog"),
 ) -> None:
     """Upload a file (CSV or Parquet) with optional catalog registration."""
@@ -336,7 +336,7 @@ def upload(
             from duckpond.storage import get_storage_backend
 
             if settings.default_storage_backend == "local":
-                storage_path = Path(settings.local_storage_path) / "tenants"
+                storage_path = Path(settings.local_storage_path) / "accounts"
                 storage_backend = get_storage_backend(
                     backend_type="local", config={"path": str(storage_path)}
                 )
@@ -359,8 +359,7 @@ def upload(
                 result = await storage_backend.upload_file(
                     local_path=file_path,
                     remote_key=remote_key,
-                    tenant_id=tenant,
-                    metadata={
+                    account_id=account,                     metadata={
                         "original_filename": file_path.name,
                         "dataset_name": dataset_name,
                         "uploaded_at": datetime.now(UTC).isoformat(),
@@ -390,7 +389,7 @@ def upload(
 
                 if catalog:
                     catalog_manager = await create_catalog_manager(
-                        tenant, settings=settings
+                        account, settings=settings
                     )
 
                     result_path = (
@@ -398,7 +397,7 @@ def upload(
                     )
 
                     if settings.default_storage_backend == "local":
-                        storage_path = Path(settings.local_storage_path) / "tenants"
+                        storage_path = Path(settings.local_storage_path) / "accounts"
                         abs_parquet_path = storage_path / result_path
                     else:
                         abs_parquet_path = f"s3://{settings.s3_bucket}/{result_path}"
@@ -415,15 +414,15 @@ def upload(
 
                     print_info("\nNext steps:")
                     print_info(
-                        f"  - View dataset: duckpond dataset get {dataset_name} --tenant {tenant}"
+                        f"  - View dataset: duckpond dataset get {dataset_name} --account {account}"
                     )
                     print_info(
-                        f"  - Query: duckpond query execute --sql 'SELECT * FROM {full_name} LIMIT 10' --tenant {tenant}"
+                        f"  - Query: duckpond query execute --sql 'SELECT * FROM {full_name} LIMIT 10' --account {account}"
                     )
                 else:
                     print_info("File uploaded but not registered in catalog")
                     print_info(
-                        f"To register later, use: duckpond dataset upload {dataset_name} {file_path} -t {tenant} --catalog"
+                        f"To register later, use: duckpond dataset upload {dataset_name} {file_path} -t {account} --catalog"
                     )
 
             finally:
@@ -442,7 +441,7 @@ def register(
     dataset_name: str = typer.Argument(
         ..., help="Dataset name from storage to register"
     ),
-    tenant: str = typer.Option(..., "--tenant", "-t", help="Tenant ID"),
+    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
     catalog: str = typer.Option("default", "--catalog", "-c", help="Catalog name"),
 ) -> None:
     """Register a dataset from storage as a view in the catalog.
@@ -467,7 +466,7 @@ def register(
             from duckpond.storage import get_storage_backend
 
             if settings.default_storage_backend == "local":
-                storage_path = Path(settings.local_storage_path) / "tenants"
+                storage_path = Path(settings.local_storage_path) / "accounts"
                 storage_backend = get_storage_backend(
                     backend_type="local", config={"path": str(storage_path)}
                 )
@@ -477,7 +476,7 @@ def register(
                 )
 
             tables_files = await storage_backend.list_files(
-                prefix=f"tables/{dataset_name}", tenant_id=tenant, recursive=True
+                prefix=f"tables/{dataset_name}", account_id=account, recursive=True
             )
 
             parquet_files = [f for f in tables_files if f.endswith(".parquet")]
@@ -487,7 +486,7 @@ def register(
                     f"No Parquet files found for dataset '{dataset_name}' in storage"
                 )
                 print_info(
-                    f"Use 'duckpond dataset list -t {tenant}' to see available datasets"
+                    f"Use 'duckpond dataset list -t {account}' to see available datasets"
                 )
                 raise typer.Exit(1)
 
@@ -497,8 +496,8 @@ def register(
                 file_path = str(
                     (
                         Path(settings.local_storage_path)
-                        / "tenants"
-                        / tenant
+                        / "accounts"
+                        / account
                         / parquet_files[0]
                     ).absolute()
                 )
@@ -506,8 +505,8 @@ def register(
                 file_path = str(
                     (
                         Path(settings.local_storage_path)
-                        / "tenants"
-                        / tenant
+                        / "accounts"
+                        / account
                         / f"tables/{dataset_name}/*.parquet"
                     ).absolute()
                 )
@@ -515,7 +514,7 @@ def register(
             print_info(f"File pattern: {file_path}")
 
             catalog_manager = await create_catalog_manager(
-                tenant, catalog_name=catalog, settings=settings
+                account, catalog_name=catalog, settings=settings
             )
 
             await catalog_manager.register_parquet_file(
@@ -525,7 +524,7 @@ def register(
 
             print_success(f"Registered '{dataset_name}' as view in catalog '{catalog}'")
             print_info(
-                f"You can now query it with: duckpond query execute -t {tenant} -c {catalog} -s 'SELECT * FROM \"{catalog}\".{dataset_name}'"
+                f"You can now query it with: duckpond query execute -t {account} -c {catalog} -s 'SELECT * FROM \"{catalog}\".{dataset_name}'"
             )
 
         except Exception as e:
@@ -539,14 +538,14 @@ def register(
 @app.command()
 def snapshots(
     dataset_name: str = typer.Argument(..., help="Dataset name"),
-    tenant: str = typer.Option(..., "--tenant", "-t", help="Tenant ID"),
+    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
 ) -> None:
     """List all snapshots for a dataset."""
 
     async def _snapshots() -> None:
         try:
             settings = get_settings()
-            catalog_manager = await create_catalog_manager(tenant, settings=settings)
+            catalog_manager = await create_catalog_manager(account, settings=settings)
 
             snapshots = await catalog_manager.list_snapshots(dataset_name)
 

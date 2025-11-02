@@ -11,13 +11,13 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, status
 from pydantic import BaseModel, Field
 
-from duckpond.api.dependencies import CurrentTenant
+from duckpond.api.dependencies import CurrentAccount
 from duckpond.api.exceptions import (
     BadRequestException,
     NotFoundException,
     ValidationException,
 )
-from duckpond.query.ducklake import TenantDuckLakeManager
+from duckpond.query.ducklake import AccountDuckLakeManager
 from duckpond.query.executor import QueryExecutor
 
 logger = logging.getLogger(__name__)
@@ -84,14 +84,14 @@ Example:
 async def execute_query(
     dataset_name: str,
     request: QueryRequest,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ):
     """Execute SQL query against dataset.
 
     Args:
         dataset_name: Name of the dataset to query
         request: Query request with SQL and parameters
-        tenant_id: Authenticated tenant ID
+        account_id: Authenticated account ID
 
     Returns:
         QueryResponse with query results
@@ -106,7 +106,7 @@ async def execute_query(
     logger.info(
         f"Executing query on dataset {dataset_name}",
         extra={
-            "tenant_id": tenant_id,
+            "account_id": account_id,
             "dataset_name": dataset_name,
             "limit": request.limit,
             "timeout": request.timeout_seconds,
@@ -114,7 +114,7 @@ async def execute_query(
     )
 
     try:
-        ducklake_manager = TenantDuckLakeManager.create(tenant_id)
+        ducklake_manager = AccountDuckLakeManager.create(account_id)
         await ducklake_manager.initialize()
 
         try:
@@ -145,7 +145,7 @@ async def execute_query(
             logger.info(
                 f"Query executed successfully: {result.row_count} rows",
                 extra={
-                    "tenant_id": tenant_id,
+                    "account_id": account_id,
                     "dataset_name": dataset_name,
                     "row_count": result.row_count,
                     "execution_time_ms": execution_time_ms,
@@ -167,7 +167,7 @@ async def execute_query(
         logger.error(
             f"Query execution failed: {error_msg}",
             extra={
-                "tenant_id": tenant_id,
+                "account_id": account_id,
                 "dataset_name": dataset_name,
                 "error": error_msg,
             },
@@ -204,14 +204,14 @@ Example:
 async def explain_query(
     dataset_name: str,
     request: QueryRequest,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ):
     """Get query execution plan.
 
     Args:
         dataset_name: Name of the dataset to query
         request: Query request with SQL
-        tenant_id: Authenticated tenant ID
+        account_id: Authenticated account ID
 
     Returns:
         ExplainResponse with query execution plan
@@ -226,13 +226,13 @@ async def explain_query(
     logger.info(
         f"Explaining query on dataset {dataset_name}",
         extra={
-            "tenant_id": tenant_id,
+            "account_id": account_id,
             "dataset_name": dataset_name,
         },
     )
 
     try:
-        ducklake_manager = TenantDuckLakeManager.create(tenant_id)
+        ducklake_manager = AccountDuckLakeManager.create(account_id)
         await ducklake_manager.initialize()
 
         try:
@@ -247,7 +247,7 @@ async def explain_query(
             logger.info(
                 "Query plan generated successfully",
                 extra={
-                    "tenant_id": tenant_id,
+                    "account_id": account_id,
                     "dataset_name": dataset_name,
                     "execution_time_ms": execution_time_ms,
                 },
@@ -267,7 +267,7 @@ async def explain_query(
         logger.error(
             f"Query explain failed: {error_msg}",
             extra={
-                "tenant_id": tenant_id,
+                "account_id": account_id,
                 "dataset_name": dataset_name,
                 "error": error_msg,
             },
@@ -282,7 +282,7 @@ async def explain_query(
 
 
 async def _validate_dataset_exists(
-    ducklake_manager: TenantDuckLakeManager, dataset_name: str
+    ducklake_manager: AccountDuckLakeManager, dataset_name: str
 ) -> None:
     """Validate that dataset exists in catalog.
 

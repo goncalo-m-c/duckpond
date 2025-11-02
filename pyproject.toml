@@ -1,7 +1,7 @@
 [project]
 name = "duckpond"
 version = "25.1"
-description = "Multi-tenant data platform with DuckDB and DuckLake"
+description = "Multi-account data platform with DuckDB and DuckLake"
 requires-python = "~=3.13.0"
 dependencies = [
     "fastapi>=0.104.0",
@@ -29,6 +29,17 @@ dependencies = [
     "grpcio-tools>=1.76.0",
 ]
 
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "mypy>=1.18.2",
+    "pandas>=2.3.3",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.14.2",
+]
 
 [project.scripts]
 duckpond = "duckpond.cli:main_cli"
@@ -42,15 +53,8 @@ where = ["."]
 include = ["duckpond*"]
 exclude = ["alembic*", "tests*"]
 
-[tool.black]
-line-length = 100
-target-version = ['py313']
-
-[tool.isort]
-profile = "black"
-line_length = 100
-
 [tool.mypy]
+plugins = ["pydantic.mypy"]
 python_version = "3.13"
 strict = true
 warn_return_any = true
@@ -79,15 +83,3 @@ line-ending = "auto"
 [tool.uv]
 # UV-specific configuration
 package = true
-
-[dependency-groups]
-dev = [
-    "httpx>=0.28.1",
-    "mypy>=1.18.2",
-    "pandas>=2.3.3",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-cov>=7.0.0",
-    "pytest-mock>=3.15.1",
-    "ruff>=0.14.2",
-]

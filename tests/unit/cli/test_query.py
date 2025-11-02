@@ -8,17 +8,17 @@ from typer.testing import CliRunner
 
 from duckpond.cli.main import app
 from duckpond.query.models import QueryResult
-from duckpond.tenants.models import Tenant
+from duckpond.accounts.models import Account
 
 runner = CliRunner()
 
 
 @pytest.fixture
-def mock_tenant():
-    """Create mock tenant."""
-    return Tenant(
-        tenant_id="test-tenant",
-        name="Test Tenant",
+def mock_account():
+    """Create mock account."""
+    return Account(
+        account_id="test-account",
+        name="Test Account",
         api_key_hash="hash123",
         ducklake_catalog_url="test_catalog.db",
         storage_backend="local",
@@ -47,8 +47,8 @@ class TestQueryExecute:
     """Tests for query execute command."""
 
     @patch("duckpond.cli.query.get_session")
-    @patch("duckpond.cli.query.TenantManager")
-    @patch("duckpond.cli.query.TenantDuckLakeManager")
+    @patch("duckpond.cli.query.AccountManager")
+    @patch("duckpond.cli.query.AccountDuckLakeManager")
     @patch("duckpond.cli.query.QueryExecutor")
     def test_execute_inline_sql(
         self,
@@ -56,8 +56,7 @@ class TestQueryExecute:
         mock_ducklake_class,
         mock_manager_class,
         mock_session,
-        mock_tenant,
-        mock_query_result,
+        mock_account,         mock_query_result,
     ):
         """Test executing inline SQL query."""
         # Setup mocks
@@ -65,7 +64,7 @@ class TestQueryExecute:
         mock_session.return_value.__aenter__.return_value = mock_session_ctx
 
         mock_manager = MagicMock()
-        mock_manager.get_tenant = AsyncMock(return_value=mock_tenant)
+        mock_manager.get_account = AsyncMock(return_value=mock_account)
         mock_manager_class.return_value = mock_manager
 
         mock_executor = MagicMock()
@@ -78,8 +77,8 @@ class TestQueryExecute:
             [
                 "query",
                 "execute",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--sql",
                 "SELECT * FROM catalog.sales",
             ],
@@ -91,8 +90,8 @@ class TestQueryExecute:
         assert "0.500" in result.stdout  # Execution time
 
     @patch("duckpond.cli.query.get_session")
-    @patch("duckpond.cli.query.TenantManager")
-    @patch("duckpond.cli.query.TenantDuckLakeManager")
+    @patch("duckpond.cli.query.AccountManager")
+    @patch("duckpond.cli.query.AccountDuckLakeManager")
     @patch("duckpond.cli.query.QueryExecutor")
     def test_execute_from_file(
         self,
@@ -100,8 +99,7 @@ class TestQueryExecute:
         mock_ducklake_class,
         mock_manager_class,
         mock_session,
-        mock_tenant,
-        mock_query_result,
+        mock_account,         mock_query_result,
         tmp_path,
     ):
         """Test executing SQL from file."""
@@ -114,7 +112,7 @@ class TestQueryExecute:
         mock_session.return_value.__aenter__.return_value = mock_session_ctx
 
         mock_manager = MagicMock()
-        mock_manager.get_tenant = AsyncMock(return_value=mock_tenant)
+        mock_manager.get_account = AsyncMock(return_value=mock_account)
         mock_manager_class.return_value = mock_manager
 
         mock_executor = MagicMock()
@@ -127,8 +125,8 @@ class TestQueryExecute:
             [
                 "query",
                 "execute",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--file",
                 str(sql_file),
             ],
@@ -139,8 +137,8 @@ class TestQueryExecute:
         assert "Reading SQL from" in result.stdout
 
     @patch("duckpond.cli.query.get_session")
-    @patch("duckpond.cli.query.TenantManager")
-    @patch("duckpond.cli.query.TenantDuckLakeManager")
+    @patch("duckpond.cli.query.AccountManager")
+    @patch("duckpond.cli.query.AccountDuckLakeManager")
     @patch("duckpond.cli.query.QueryExecutor")
     def test_execute_json_output(
         self,
@@ -148,8 +146,7 @@ class TestQueryExecute:
         mock_ducklake_class,
         mock_manager_class,
         mock_session,
-        mock_tenant,
-        mock_query_result,
+        mock_account,         mock_query_result,
     ):
         """Test query with JSON output format."""
         # Setup mocks
@@ -157,7 +154,7 @@ class TestQueryExecute:
         mock_session.return_value.__aenter__.return_value = mock_session_ctx
 
         mock_manager = MagicMock()
-        mock_manager.get_tenant = AsyncMock(return_value=mock_tenant)
+        mock_manager.get_account = AsyncMock(return_value=mock_account)
         mock_manager_class.return_value = mock_manager
 
         mock_executor = MagicMock()
@@ -170,8 +167,8 @@ class TestQueryExecute:
             [
                 "query",
                 "execute",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--sql",
                 "SELECT * FROM catalog.sales",
                 "--output",
@@ -183,8 +180,8 @@ class TestQueryExecute:
         assert result.exit_code == 0
 
     @patch("duckpond.cli.query.get_session")
-    @patch("duckpond.cli.query.TenantManager")
-    @patch("duckpond.cli.query.TenantDuckLakeManager")
+    @patch("duckpond.cli.query.AccountManager")
+    @patch("duckpond.cli.query.AccountDuckLakeManager")
     @patch("duckpond.cli.query.QueryExecutor")
     def test_execute_with_limit(
         self,
@@ -192,8 +189,7 @@ class TestQueryExecute:
         mock_ducklake_class,
         mock_manager_class,
         mock_session,
-        mock_tenant,
-        mock_query_result,
+        mock_account,         mock_query_result,
     ):
         """Test query with row limit."""
         # Setup mocks
@@ -201,7 +197,7 @@ class TestQueryExecute:
         mock_session.return_value.__aenter__.return_value = mock_session_ctx
 
         mock_manager = MagicMock()
-        mock_manager.get_tenant = AsyncMock(return_value=mock_tenant)
+        mock_manager.get_account = AsyncMock(return_value=mock_account)
         mock_manager_class.return_value = mock_manager
 
         mock_executor = MagicMock()
@@ -214,8 +210,8 @@ class TestQueryExecute:
             [
                 "query",
                 "execute",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--sql",
                 "SELECT * FROM catalog.sales",
                 "--limit",
@@ -231,8 +227,8 @@ class TestQueryExecute:
         assert call_kwargs["limit"] == 100
 
     @patch("duckpond.cli.query.get_session")
-    @patch("duckpond.cli.query.TenantManager")
-    @patch("duckpond.cli.query.TenantDuckLakeManager")
+    @patch("duckpond.cli.query.AccountManager")
+    @patch("duckpond.cli.query.AccountDuckLakeManager")
     @patch("duckpond.cli.query.QueryExecutor")
     def test_execute_with_export(
         self,
@@ -240,8 +236,7 @@ class TestQueryExecute:
         mock_ducklake_class,
         mock_manager_class,
         mock_session,
-        mock_tenant,
-        mock_query_result,
+        mock_account,         mock_query_result,
         tmp_path,
     ):
         """Test query with result export to file."""
@@ -252,7 +247,7 @@ class TestQueryExecute:
         mock_session.return_value.__aenter__.return_value = mock_session_ctx
 
         mock_manager = MagicMock()
-        mock_manager.get_tenant = AsyncMock(return_value=mock_tenant)
+        mock_manager.get_account = AsyncMock(return_value=mock_account)
         mock_manager_class.return_value = mock_manager
 
         mock_executor = MagicMock()
@@ -265,8 +260,8 @@ class TestQueryExecute:
             [
                 "query",
                 "execute",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--sql",
                 "SELECT * FROM catalog.sales",
                 "--export",
@@ -280,8 +275,8 @@ class TestQueryExecute:
         assert "exported" in result.stdout.lower()
 
     @patch("duckpond.cli.query.get_session")
-    @patch("duckpond.cli.query.TenantManager")
-    @patch("duckpond.cli.query.TenantDuckLakeManager")
+    @patch("duckpond.cli.query.AccountManager")
+    @patch("duckpond.cli.query.AccountDuckLakeManager")
     @patch("duckpond.cli.query.QueryExecutor")
     def test_execute_time_travel_query(
         self,
@@ -289,8 +284,7 @@ class TestQueryExecute:
         mock_ducklake_class,
         mock_manager_class,
         mock_session,
-        mock_tenant,
-        mock_query_result,
+        mock_account,         mock_query_result,
     ):
         """Test time travel query with AS OF."""
         # Setup mocks
@@ -298,7 +292,7 @@ class TestQueryExecute:
         mock_session.return_value.__aenter__.return_value = mock_session_ctx
 
         mock_manager = MagicMock()
-        mock_manager.get_tenant = AsyncMock(return_value=mock_tenant)
+        mock_manager.get_account = AsyncMock(return_value=mock_account)
         mock_manager_class.return_value = mock_manager
 
         mock_executor = MagicMock()
@@ -311,8 +305,8 @@ class TestQueryExecute:
             [
                 "query",
                 "execute",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--sql",
                 "SELECT * FROM catalog.sales",
                 "--as-of",
@@ -326,7 +320,7 @@ class TestQueryExecute:
 
     def test_execute_no_sql_provided(self):
         """Test error when no SQL is provided."""
-        result = runner.invoke(app, ["query", "execute", "--tenant", "test-tenant"])
+        result = runner.invoke(app, ["query", "execute", "--account", "test-account"])
 
         assert result.exit_code == 1
         error_output = result.stdout + result.stderr
@@ -342,8 +336,8 @@ class TestQueryExecute:
             [
                 "query",
                 "execute",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--sql",
                 "SELECT 1",
                 "--file",
@@ -365,8 +359,8 @@ class TestQueryExecute:
             [
                 "query",
                 "execute",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--sql",
                 "SELECT 1",
                 "--output",
@@ -385,8 +379,8 @@ class TestQueryExplain:
     """Tests for query explain command."""
 
     @patch("duckpond.cli.query.get_session")
-    @patch("duckpond.cli.query.TenantManager")
-    @patch("duckpond.cli.query.TenantDuckLakeManager")
+    @patch("duckpond.cli.query.AccountManager")
+    @patch("duckpond.cli.query.AccountDuckLakeManager")
     @patch("duckpond.cli.query.QueryExecutor")
     def test_explain_query(
         self,
@@ -394,15 +388,14 @@ class TestQueryExplain:
         mock_ducklake_class,
         mock_manager_class,
         mock_session,
-        mock_tenant,
-    ):
+        mock_account,     ):
         """Test EXPLAIN command."""
         # Setup mocks
         mock_session_ctx = AsyncMock()
         mock_session.return_value.__aenter__.return_value = mock_session_ctx
 
         mock_manager = MagicMock()
-        mock_manager.get_tenant = AsyncMock(return_value=mock_tenant)
+        mock_manager.get_account = AsyncMock(return_value=mock_account)
         mock_manager_class.return_value = mock_manager
 
         mock_executor = MagicMock()
@@ -417,8 +410,8 @@ class TestQueryExplain:
             [
                 "query",
                 "explain",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
                 "--sql",
                 "SELECT * FROM catalog.sales",
             ],
@@ -431,7 +424,7 @@ class TestQueryExplain:
 
     def test_explain_no_sql_provided(self):
         """Test EXPLAIN error when no SQL is provided."""
-        result = runner.invoke(app, ["query", "explain", "--tenant", "test-tenant"])
+        result = runner.invoke(app, ["query", "explain", "--account", "test-account"])
 
         assert result.exit_code == 1
         error_output = result.stdout + result.stderr

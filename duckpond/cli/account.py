@@ -1,4 +1,4 @@
-"""Tenant management commands for DuckPond."""
+"""Account management commands for DuckPond."""
 
 import asyncio
 import sys
@@ -21,14 +21,14 @@ from duckpond.cli.output import (
 )
 from duckpond.db.session import get_engine, create_session_factory, get_session
 from duckpond.logging_config import get_logger
-from duckpond.tenants.manager import (
+from duckpond.accounts.manager import (
     APIKeyNotFoundError,
-    TenantAlreadyExistsError,
-    TenantManager,
-    TenantNotFoundError,
+    AccountAlreadyExistsError,
+    AccountManager,
+    AccountNotFoundError,
 )
 
-app = typer.Typer(help="Manage tenants")
+app = typer.Typer(help="Manage accounts")
 console = Console()
 logger = get_logger(__name__)
 
@@ -36,7 +36,7 @@ logger = get_logger(__name__)
 @app.command()
 def create(
     ctx: typer.Context,
-    name: str = typer.Argument(..., help="Tenant name (must be unique)"),
+    name: str = typer.Argument(..., help="Account name (must be unique)"),
     storage_backend: str = typer.Option(
         "local",
         "--storage-backend",
@@ -93,19 +93,19 @@ def create(
     ),
 ) -> None:
     """
-    Create a new tenant.
+    Create a new account.
 
-    Creates a tenant with specified quotas and generates an API key.
+    Creates a account with specified quotas and generates an API key.
     The API key will only be displayed once on creation.
 
     Examples:
-        duckpond tenants create mycompany
+        duckpond accounts create mycompany
 
-        duckpond tenants create mycompany --storage-backend s3 --s3-bucket my-bucket
+        duckpond accounts create mycompany --storage-backend s3 --s3-bucket my-bucket
 
-        duckpond tenants create mycompany --max-storage-gb 200 --max-query-memory-gb 8
+        duckpond accounts create mycompany --max-storage-gb 200 --max-query-memory-gb 8
 
-        duckpond tenants create mycompany --storage-backend s3 \\
+        duckpond accounts create mycompany --storage-backend s3 \\
             --s3-bucket my-bucket --s3-endpoint http://localhost:9000
     """
 
@@ -113,8 +113,8 @@ def create(
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
-            result = await manager.create_tenant(
+            manager = AccountManager(session)
+            result = await manager.create_account(
                 name=name,
                 storage_backend=storage_backend,
                 storage_config=storage_config,
@@ -125,15 +125,15 @@ def create(
             return result
 
     try:
-        print_info(f"Creating tenant: {name}")
+        print_info(f"Creating account: {name}")
 
         if not name or len(name) < 3:
-            print_error("Tenant name must be at least 3 characters")
+            print_error("Account name must be at least 3 characters")
             raise typer.Exit(1)
 
         if not name.replace("-", "").replace("_", "").isalnum():
             print_error(
-                "Tenant name must be alphanumeric (hyphens and underscores allowed)"
+                "Account name must be alphanumeric (hyphens and underscores allowed)"
             )
             raise typer.Exit(1)
 
@@ -166,40 +166,40 @@ def create(
             console.print("  Supported backends: local, s3")
             raise typer.Exit(1)
 
-        tenant, api_key = asyncio.run(_create())
+        account, api_key = asyncio.run(_create())
 
         output_format = ctx.obj.output_format if ctx.obj else "table"
 
         if output_format == "json":
             print_json(
                 {
-                    "tenant_id": tenant.tenant_id,
-                    "name": tenant.name,
+                    "account_id": account.account_id,
+                    "name": account.name,
                     "api_key": api_key,
-                    "storage_backend": tenant.storage_backend,
-                    "ducklake_catalog_url": tenant.ducklake_catalog_url,
-                    "max_storage_gb": tenant.max_storage_gb,
-                    "max_query_memory_gb": tenant.max_query_memory_gb,
-                    "max_concurrent_queries": tenant.max_concurrent_queries,
-                    "created_at": tenant.created_at.isoformat(),
+                    "storage_backend": account.storage_backend,
+                    "ducklake_catalog_url": account.ducklake_catalog_url,
+                    "max_storage_gb": account.max_storage_gb,
+                    "max_query_memory_gb": account.max_query_memory_gb,
+                    "max_concurrent_queries": account.max_concurrent_queries,
+                    "created_at": account.created_at.isoformat(),
                 }
             )
         else:
             console.print()
-            print_success(f"Tenant created: {name}")
+            print_success(f"Account created: {name}")
             console.print()
 
             display_data = {
-                "Tenant ID": tenant.tenant_id,
-                "Name": tenant.name,
-                "Storage Backend": tenant.storage_backend,
-                "Catalog URL": tenant.ducklake_catalog_url,
-                "Max Storage": f"{tenant.max_storage_gb} GB",
-                "Query Memory": f"{tenant.max_query_memory_gb} GB",
-                "Max Queries": str(tenant.max_concurrent_queries),
-                "Created": tenant.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "Account ID": account.account_id,
+                "Name": account.name,
+                "Storage Backend": account.storage_backend,
+                "Catalog URL": account.ducklake_catalog_url,
+                "Max Storage": f"{account.max_storage_gb} GB",
+                "Query Memory": f"{account.max_query_memory_gb} GB",
+                "Max Queries": str(account.max_concurrent_queries),
+                "Created": account.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             }
-            print_dict(display_data, title="Tenant Details")
+            print_dict(display_data, title="Account Details")
 
             console.print()
             print_panel(
@@ -212,14 +212,14 @@ def create(
                 border_style="yellow",
             )
             console.print()
-            print_info(f"View tenant details: duckpond tenants show {tenant.tenant_id}")
+            print_info(f"View account details: duckpond accounts show {account.account_id}")
 
-    except TenantAlreadyExistsError:
-        print_error(f"Tenant already exists: {name}")
+    except AccountAlreadyExistsError:
+        print_error(f"Account already exists: {name}")
         raise typer.Exit(1)
     except Exception as e:
-        logger.exception("Failed to create tenant")
-        print_error(f"Failed to create tenant: {str(e)}")
+        logger.exception("Failed to create account")
+        print_error(f"Failed to create account: {str(e)}")
         raise typer.Exit(1)
 
 
@@ -230,41 +230,41 @@ def list(
         100,
         "--limit",
         "-l",
-        help="Maximum number of tenants to display",
+        help="Maximum number of accounts to display",
     ),
     offset: int = typer.Option(
         0,
         "--offset",
-        help="Number of tenants to skip",
+        help="Number of accounts to skip",
     ),
 ) -> None:
     """
-    List all tenants.
+    List all accounts.
 
-    Displays all tenants with their basic information.
+    Displays all accounts with their basic information.
 
     Examples:
-        duckpond tenants list
-        duckpond tenants list --limit 50
-        duckpond tenants list --output json
+        duckpond accounts list
+        duckpond accounts list --limit 50
+        duckpond accounts list --output json
     """
 
     async def _list():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
-            return await manager.list_tenants(offset=offset, limit=limit)
+            manager = AccountManager(session)
+            return await manager.list_accounts(offset=offset, limit=limit)
 
     try:
-        print_info("Retrieving tenant list...")
+        print_info("Retrieving account list...")
 
-        tenants, total = asyncio.run(_list())
+        accounts, total = asyncio.run(_list())
 
-        if not tenants:
-            print_warning("No tenants found")
+        if not accounts:
+            print_warning("No accounts found")
             console.print()
-            print_info("Create a tenant with: duckpond tenants create <name>")
+            print_info("Create a account with: duckpond accounts create <name>")
             return
 
         output_format = ctx.obj.output_format if ctx.obj else "table"
@@ -272,9 +272,9 @@ def list(
         if output_format == "json":
             print_json(
                 {
-                    "tenants": [
+                    "accounts": [
                         {
-                            "tenant_id": t.tenant_id,
+                            "account_id": t.account_id,
                             "name": t.name,
                             "storage_backend": t.storage_backend,
                             "max_storage_gb": t.max_storage_gb,
@@ -282,8 +282,7 @@ def list(
                             "max_concurrent_queries": t.max_concurrent_queries,
                             "created_at": t.created_at.isoformat(),
                         }
-                        for t in tenants
-                    ],
+                        for t in accounts                     ],
                     "total": total,
                     "offset": offset,
                     "limit": limit,
@@ -291,7 +290,7 @@ def list(
             )
         else:
             columns = [
-                "Tenant ID",
+                "Account ID",
                 "Name",
                 "Backend",
                 "Status",
@@ -300,87 +299,87 @@ def list(
             ]
 
             display_data = []
-            for tenant in tenants:
+            for account in accounts:
                 row = {
-                    "Tenant ID": tenant.tenant_id[:16] + "...",
-                    "Name": tenant.name,
-                    "Backend": tenant.storage_backend,
-                    "Storage (GB)": f"{tenant.max_storage_gb}",
-                    "Created": tenant.created_at.strftime("%Y-%m-%d"),
+                    "Account ID": account.account_id[:16] + "...",
+                    "Name": account.name,
+                    "Backend": account.storage_backend,
+                    "Storage (GB)": f"{account.max_storage_gb}",
+                    "Created": account.created_at.strftime("%Y-%m-%d"),
                 }
                 display_data.append(row)
 
             console.print()
-            print_table(display_data, title="Tenants", columns=columns)
+            print_table(display_data, title="Accounts", columns=columns)
             console.print()
-            print_info(f"Showing {len(tenants)} of {total} tenants")
+            print_info(f"Showing {len(accounts)} of {total} accounts")
 
     except Exception as e:
-        logger.exception("Failed to list tenants")
-        print_error(f"Failed to list tenants: {str(e)}")
+        logger.exception("Failed to list accounts")
+        print_error(f"Failed to list accounts: {str(e)}")
         raise typer.Exit(1)
 
 
 @app.command()
 def show(
     ctx: typer.Context,
-    tenant_id: str = typer.Argument(..., help="Tenant ID"),
+    account_id: str = typer.Argument(..., help="Account ID"),
 ) -> None:
     """
-    Show detailed tenant information.
+    Show detailed account information.
 
-    Displays comprehensive tenant details including quotas and catalog URL.
+    Displays comprehensive account details including quotas and catalog URL.
 
     Examples:
-        duckpond tenants show <tenant-id>
-        duckpond tenants show <tenant-id> --output json
+        duckpond accounts show <account-id>
+        duckpond accounts show <account-id> --output json
     """
 
     async def _show():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
-            return await manager.get_tenant_by_id(tenant_id)
+            manager = AccountManager(session)
+            return await manager.get_account_by_id(account_id)
 
     try:
-        print_info(f"Retrieving tenant: {tenant_id}")
+        print_info(f"Retrieving account: {account_id}")
 
-        tenant = asyncio.run(_show())
+        account = asyncio.run(_show())
 
         output_format = ctx.obj.output_format if ctx.obj else "table"
 
         if output_format == "json":
             print_json(
                 {
-                    "tenant_id": tenant.tenant_id,
-                    "name": tenant.name,
-                    "storage_backend": tenant.storage_backend,
-                    "storage_config": tenant.storage_config,
-                    "ducklake_catalog_url": tenant.ducklake_catalog_url,
-                    "max_storage_gb": tenant.max_storage_gb,
-                    "max_query_memory_gb": tenant.max_query_memory_gb,
-                    "max_concurrent_queries": tenant.max_concurrent_queries,
-                    "created_at": tenant.created_at.isoformat(),
-                    "updated_at": tenant.updated_at.isoformat()
-                    if tenant.updated_at
+                    "account_id": account.account_id,
+                    "name": account.name,
+                    "storage_backend": account.storage_backend,
+                    "storage_config": account.storage_config,
+                    "ducklake_catalog_url": account.ducklake_catalog_url,
+                    "max_storage_gb": account.max_storage_gb,
+                    "max_query_memory_gb": account.max_query_memory_gb,
+                    "max_concurrent_queries": account.max_concurrent_queries,
+                    "created_at": account.created_at.isoformat(),
+                    "updated_at": account.updated_at.isoformat()
+                    if account.updated_at
                     else None,
                 }
             )
         else:
             console.print()
-            print_success(f"Tenant found: {tenant.name}")
+            print_success(f"Account found: {account.name}")
             console.print()
 
             basic_info = {
-                "Tenant ID": tenant.tenant_id,
-                "Name": tenant.name,
-                "Storage Backend": tenant.storage_backend,
-                "Catalog URL": tenant.ducklake_catalog_url,
-                "Created": tenant.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "Account ID": account.account_id,
+                "Name": account.name,
+                "Storage Backend": account.storage_backend,
+                "Catalog URL": account.ducklake_catalog_url,
+                "Created": account.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             }
-            if tenant.updated_at:
-                basic_info["Last Updated"] = tenant.updated_at.strftime(
+            if account.updated_at:
+                basic_info["Last Updated"] = account.updated_at.strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
 
@@ -388,25 +387,25 @@ def show(
             console.print()
 
             quota_info = {
-                "Max Storage": f"{tenant.max_storage_gb} GB",
-                "Query Memory": f"{tenant.max_query_memory_gb} GB",
-                "Max Concurrent Queries": str(tenant.max_concurrent_queries),
+                "Max Storage": f"{account.max_storage_gb} GB",
+                "Query Memory": f"{account.max_query_memory_gb} GB",
+                "Max Concurrent Queries": str(account.max_concurrent_queries),
             }
             print_dict(quota_info, title="Quotas & Limits")
 
-    except TenantNotFoundError:
-        print_error(f"Tenant not found: {tenant_id}")
+    except AccountNotFoundError:
+        print_error(f"Account not found: {account_id}")
         raise typer.Exit(1)
     except Exception as e:
-        logger.exception("Failed to show tenant")
-        print_error(f"Failed to show tenant: {str(e)}")
+        logger.exception("Failed to show account")
+        print_error(f"Failed to show account: {str(e)}")
         raise typer.Exit(1)
 
 
 @app.command()
 def update(
     ctx: typer.Context,
-    tenant_id: str = typer.Argument(..., help="Tenant ID"),
+    account_id: str = typer.Argument(..., help="Account ID"),
     max_storage_gb: Optional[int] = typer.Option(
         None,
         "--max-storage-gb",
@@ -433,23 +432,23 @@ def update(
     ),
 ) -> None:
     """
-    Update tenant quotas.
+    Update account quotas.
 
-    Updates tenant quota configuration.
+    Updates account quota configuration.
     At least one update parameter must be provided.
 
     Examples:
-        duckpond tenants update <tenant-id> --max-storage-gb 200
-        duckpond tenants update <tenant-id> --max-query-memory-gb 16 --max-queries 20
+        duckpond accounts update <account-id> --max-storage-gb 200
+        duckpond accounts update <account-id> --max-query-memory-gb 16 --max-queries 20
     """
 
     async def _update():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
-            return await manager.update_tenant_quotas(
-                tenant_id=tenant_id,
+            manager = AccountManager(session)
+            return await manager.update_account_quotas(
+                account_id=account_id,
                 max_storage_gb=max_storage_gb,
                 max_query_memory_gb=max_query_memory_gb,
                 max_concurrent_queries=max_concurrent_queries,
@@ -468,7 +467,7 @@ def update(
             console.print("  --max-storage-gb, --max-query-memory-gb, --max-queries")
             raise typer.Exit(1)
 
-        print_info(f"Updating tenant: {tenant_id}")
+        print_info(f"Updating account: {account_id}")
 
         updates = {}
         if max_storage_gb is not None:
@@ -487,73 +486,73 @@ def update(
                 print_info("Update cancelled")
                 raise typer.Exit(0)
 
-        tenant = asyncio.run(_update())
+        account = asyncio.run(_update())
 
         output_format = ctx.obj.output_format if ctx.obj else "table"
 
         if output_format == "json":
             print_json(
                 {
-                    "tenant_id": tenant.tenant_id,
-                    "name": tenant.name,
-                    "max_storage_gb": tenant.max_storage_gb,
-                    "max_query_memory_gb": tenant.max_query_memory_gb,
-                    "max_concurrent_queries": tenant.max_concurrent_queries,
-                    "updated_at": tenant.updated_at.isoformat()
-                    if tenant.updated_at
+                    "account_id": account.account_id,
+                    "name": account.name,
+                    "max_storage_gb": account.max_storage_gb,
+                    "max_query_memory_gb": account.max_query_memory_gb,
+                    "max_concurrent_queries": account.max_concurrent_queries,
+                    "updated_at": account.updated_at.isoformat()
+                    if account.updated_at
                     else None,
                 }
             )
         else:
-            print_success(f"Tenant updated: {tenant.name}")
+            print_success(f"Account updated: {account.name}")
 
-    except TenantNotFoundError:
-        print_error(f"Tenant not found: {tenant_id}")
+    except AccountNotFoundError:
+        print_error(f"Account not found: {account_id}")
         raise typer.Exit(1)
     except Exception as e:
-        logger.exception("Failed to update tenant")
-        print_error(f"Failed to update tenant: {str(e)}")
+        logger.exception("Failed to update account")
+        print_error(f"Failed to update account: {str(e)}")
         raise typer.Exit(1)
 
 
 @app.command(name="storage-info")
 def storage_info(
     ctx: typer.Context,
-    tenant_id: str = typer.Argument(..., help="Tenant ID"),
+    account_id: str = typer.Argument(..., help="Account ID"),
 ) -> None:
     """
-    Show storage usage information for a tenant.
+    Show storage usage information for a account.
 
     Displays storage backend configuration and calculates actual storage usage.
 
     Examples:
-        duckpond tenants storage-info <tenant-id>
-        duckpond tenants storage-info <tenant-id> --output json
+        duckpond accounts storage-info <account-id>
+        duckpond accounts storage-info <account-id> --output json
     """
 
     async def _get_storage_info():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
+            manager = AccountManager(session)
 
-            tenant = await manager.get_tenant_by_id(tenant_id)
+            account = await manager.get_account_by_id(account_id)
 
-            usage_bytes = await manager.calculate_storage_usage(tenant_id)
+            usage_bytes = await manager.calculate_storage_usage(account_id)
 
-            return tenant, usage_bytes
+            return account, usage_bytes
 
     try:
-        print_info(f"Retrieving storage information for: {tenant_id}")
+        print_info(f"Retrieving storage information for: {account_id}")
 
-        tenant, usage_bytes = asyncio.run(_get_storage_info())
+        account, usage_bytes = asyncio.run(_get_storage_info())
 
         from duckpond.storage.utils import format_storage_size
 
         usage_str = format_storage_size(usage_bytes)
         usage_gb = usage_bytes / (1024**3)
         usage_pct = (
-            (usage_gb / tenant.max_storage_gb * 100) if tenant.max_storage_gb > 0 else 0
+            (usage_gb / account.max_storage_gb * 100) if account.max_storage_gb > 0 else 0
         )
 
         output_format = ctx.obj.output_format if ctx.obj else "table"
@@ -561,34 +560,34 @@ def storage_info(
         if output_format == "json":
             print_json(
                 {
-                    "tenant_id": tenant.tenant_id,
-                    "name": tenant.name,
-                    "storage_backend": tenant.storage_backend,
-                    "storage_config": tenant.storage_config,
+                    "account_id": account.account_id,
+                    "name": account.name,
+                    "storage_backend": account.storage_backend,
+                    "storage_config": account.storage_config,
                     "usage_bytes": usage_bytes,
                     "usage_formatted": usage_str,
                     "usage_gb": round(usage_gb, 2),
-                    "quota_gb": tenant.max_storage_gb,
+                    "quota_gb": account.max_storage_gb,
                     "usage_percentage": round(usage_pct, 1),
                 }
             )
         else:
             console.print()
-            print_success(f"Storage info for tenant: {tenant.name}")
+            print_success(f"Storage info for account: {account.name}")
             console.print()
 
             storage_info = {
-                "Backend": tenant.storage_backend,
+                "Backend": account.storage_backend,
             }
 
-            if tenant.storage_backend == "s3":
-                config = tenant.storage_config or {}
+            if account.storage_backend == "s3":
+                config = account.storage_config or {}
                 storage_info["S3 Bucket"] = config.get("bucket", "N/A")
                 storage_info["S3 Region"] = config.get("region", "N/A")
                 if config.get("endpoint_url"):
                     storage_info["S3 Endpoint"] = config["endpoint_url"]
-            elif tenant.storage_backend == "local":
-                config = tenant.storage_config or {}
+            elif account.storage_backend == "local":
+                config = account.storage_config or {}
                 storage_info["Base Path"] = config.get("base_path", "./data")
 
             print_dict(storage_info, title="Storage Configuration")
@@ -596,10 +595,10 @@ def storage_info(
 
             usage_info = {
                 "Current Usage": usage_str,
-                "Storage Quota": f"{tenant.max_storage_gb} GB",
+                "Storage Quota": f"{account.max_storage_gb} GB",
                 "Usage Percentage": f"{usage_pct:.1f}%",
                 "Available": format_storage_size(
-                    (tenant.max_storage_gb * 1024**3) - usage_bytes
+                    (account.max_storage_gb * 1024**3) - usage_bytes
                 ),
             }
 
@@ -617,8 +616,8 @@ def storage_info(
 
             print_dict(usage_info, title="Storage Usage")
 
-    except TenantNotFoundError:
-        print_error(f"Tenant not found: {tenant_id}")
+    except AccountNotFoundError:
+        print_error(f"Account not found: {account_id}")
         raise typer.Exit(1)
     except Exception as e:
         logger.exception("Failed to get storage info")
@@ -629,7 +628,7 @@ def storage_info(
 @app.command()
 def delete(
     ctx: typer.Context,
-    tenant_id: str = typer.Argument(..., help="Tenant ID"),
+    account_id: str = typer.Argument(..., help="Account ID"),
     force: bool = typer.Option(
         False,
         "--force",
@@ -639,49 +638,49 @@ def delete(
     purge_data: bool = typer.Option(
         False,
         "--purge-data",
-        help="Delete all tenant data (cannot be undone)",
+        help="Delete all account data (cannot be undone)",
     ),
 ) -> None:
     """
-    Delete a tenant.
+    Delete a account.
 
-    Permanently removes a tenant and optionally all associated data.
+    Permanently removes a account and optionally all associated data.
     This operation requires confirmation unless --force is used.
 
     WARNING: This is a destructive operation that cannot be undone!
 
     Examples:
-        duckpond tenants delete <tenant-id>
-        duckpond tenants delete <tenant-id> --purge-data
-        duckpond tenants delete <tenant-id> --force --purge-data
+        duckpond accounts delete <account-id>
+        duckpond accounts delete <account-id> --purge-data
+        duckpond accounts delete <account-id> --force --purge-data
     """
 
-    async def _get_tenant():
+    async def _get_account():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
-            return await manager.get_tenant_by_id(tenant_id)
+            manager = AccountManager(session)
+            return await manager.get_account_by_id(account_id)
 
     async def _delete():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
-            await manager.delete_tenant(tenant_id, purge_data=purge_data)
+            manager = AccountManager(session)
+            await manager.delete_account(account_id, purge_data=purge_data)
 
     try:
-        print_warning(f"Preparing to delete tenant: {tenant_id}")
+        print_warning(f"Preparing to delete account: {account_id}")
 
-        tenant = asyncio.run(_get_tenant())
+        account = asyncio.run(_get_account())
 
         console.print()
         print_panel(
-            f"[bold red]⚠ WARNING:[/bold red] You are about to delete tenant:\n\n"
-            f"  ID: {tenant.tenant_id}\n"
-            f"  Name: {tenant.name}\n\n"
+            f"[bold red]⚠ WARNING:[/bold red] You are about to delete account:\n\n"
+            f"  ID: {account.account_id}\n"
+            f"  Name: {account.name}\n\n"
             + (
-                "[bold red]This will also DELETE ALL DATA[/bold red] associated with this tenant!\n"
+                "[bold red]This will also DELETE ALL DATA[/bold red] associated with this account!\n"
                 if purge_data
                 else "Metadata will be removed but data files will be preserved.\n"
             )
@@ -694,7 +693,7 @@ def delete(
         if not force:
             if sys.stdin.isatty():
                 confirmed = confirm(
-                    f"Type the tenant name '{tenant.name}' to confirm deletion",
+                    f"Type the account name '{account.name}' to confirm deletion",
                     default=False,
                 )
                 if not confirmed:
@@ -723,32 +722,32 @@ def delete(
             print_json(
                 {
                     "deleted": True,
-                    "tenant_id": tenant_id,
+                    "account_id": account_id,
                     "data_purged": purge_data,
                 }
             )
         else:
             console.print()
-            print_success(f"Tenant deleted: {tenant.name}")
+            print_success(f"Account deleted: {account.name}")
 
             if purge_data:
-                print_info("All tenant data has been purged")
+                print_info("All account data has been purged")
             else:
-                print_info("Tenant metadata removed, data files preserved")
+                print_info("Account metadata removed, data files preserved")
 
-    except TenantNotFoundError:
-        print_error(f"Tenant not found: {tenant_id}")
+    except AccountNotFoundError:
+        print_error(f"Account not found: {account_id}")
         raise typer.Exit(1)
     except Exception as e:
-        logger.exception("Failed to delete tenant")
-        print_error(f"Failed to delete tenant: {str(e)}")
+        logger.exception("Failed to delete account")
+        print_error(f"Failed to delete account: {str(e)}")
         raise typer.Exit(1)
 
 
 @app.command(name="create-key")
 def create_key(
     ctx: typer.Context,
-    tenant_id: str = typer.Argument(..., help="Tenant ID"),
+    account_id: str = typer.Argument(..., help="Account ID"),
     description: Optional[str] = typer.Option(
         None,
         "--description",
@@ -763,33 +762,33 @@ def create_key(
     ),
 ) -> None:
     """
-    Create a new API key for a tenant.
+    Create a new API key for a account.
 
-    Generates a new API key for tenant authentication.
+    Generates a new API key for account authentication.
     The API key will only be displayed once for security.
 
     Examples:
-        duckpond tenants create-key <tenant-id>
-        duckpond tenants create-key <tenant-id> --description "Production key"
-        duckpond tenants create-key <tenant-id> --expires-in-days 90
+        duckpond accounts create-key <account-id>
+        duckpond accounts create-key <account-id> --description "Production key"
+        duckpond accounts create-key <account-id> --expires-in-days 90
     """
 
     async def _create_key():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
+            manager = AccountManager(session)
             expires_at = None
             if expires_days is not None:
                 expires_at = datetime.utcnow() + timedelta(days=expires_days)
             return await manager.create_api_key(
-                tenant_id=tenant_id,
+                account_id=account_id,
                 description=description,
                 expires_at=expires_at,
             )
 
     try:
-        print_info(f"Generating API key for tenant: {tenant_id}")
+        print_info(f"Generating API key for account: {account_id}")
 
         api_key_obj, plain_key = asyncio.run(_create_key())
 
@@ -800,7 +799,7 @@ def create_key(
                 {
                     "key_id": api_key_obj.key_id,
                     "api_key": plain_key,
-                    "tenant_id": tenant_id,
+                    "account_id": account_id,
                     "description": description,
                     "created_at": api_key_obj.created_at.isoformat(),
                     "expires_at": api_key_obj.expires_at.isoformat()
@@ -830,8 +829,8 @@ def create_key(
                 border_style="yellow",
             )
 
-    except TenantNotFoundError:
-        print_error(f"Tenant not found: {tenant_id}")
+    except AccountNotFoundError:
+        print_error(f"Account not found: {account_id}")
         raise typer.Exit(1)
     except Exception as e:
         logger.exception("Failed to create API key")
@@ -842,34 +841,34 @@ def create_key(
 @app.command(name="list-keys")
 def list_keys(
     ctx: typer.Context,
-    tenant_id: str = typer.Argument(..., help="Tenant ID"),
+    account_id: str = typer.Argument(..., help="Account ID"),
 ) -> None:
     """
-    List all API keys for a tenant.
+    List all API keys for a account.
 
     Displays all API keys (showing key prefix only for security).
 
     Examples:
-        duckpond tenants list-keys <tenant-id>
-        duckpond tenants list-keys <tenant-id> --output json
+        duckpond accounts list-keys <account-id>
+        duckpond accounts list-keys <account-id> --output json
     """
 
     async def _list_keys():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
-            return await manager.list_api_keys(tenant_id)
+            manager = AccountManager(session)
+            return await manager.list_api_keys(account_id)
 
     try:
-        print_info(f"Listing API keys for tenant: {tenant_id}")
+        print_info(f"Listing API keys for account: {account_id}")
 
         keys = asyncio.run(_list_keys())
 
         if not keys:
-            print_warning("No API keys found for this tenant")
+            print_warning("No API keys found for this account")
             console.print()
-            print_info(f"Generate one with: duckpond tenants create-key {tenant_id}")
+            print_info(f"Generate one with: duckpond accounts create-key {account_id}")
             return
 
         output_format = ctx.obj.output_format if ctx.obj else "table"
@@ -877,7 +876,7 @@ def list_keys(
         if output_format == "json":
             print_json(
                 {
-                    "tenant_id": tenant_id,
+                    "account_id": account_id,
                     "keys": [
                         {
                             "key_id": key.key_id,
@@ -912,12 +911,12 @@ def list_keys(
             ]
 
             console.print()
-            print_table(display_data, title="API Keys for Tenant")
+            print_table(display_data, title="API Keys for Account")
             console.print()
             print_info(f"Total keys: {len(keys)}")
 
-    except TenantNotFoundError:
-        print_error(f"Tenant not found: {tenant_id}")
+    except AccountNotFoundError:
+        print_error(f"Account not found: {account_id}")
         raise typer.Exit(1)
     except Exception as e:
         logger.exception("Failed to list API keys")
@@ -942,15 +941,15 @@ def revoke_key(
     Permanently revokes an API key. This action cannot be undone.
 
     Examples:
-        duckpond tenants revoke-key <key-id>
-        duckpond tenants revoke-key <key-id> --force
+        duckpond accounts revoke-key <key-id>
+        duckpond accounts revoke-key <key-id> --force
     """
 
     async def _revoke():
         engine = get_engine()
         session_factory = create_session_factory(engine)
         async with get_session(session_factory) as session:
-            manager = TenantManager(session)
+            manager = AccountManager(session)
             await manager.revoke_api_key(key_id)
 
     try:

@@ -13,7 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, File, UploadFile, Request, status
 from pydantic import BaseModel, Field
 
-from duckpond.api.dependencies import CurrentTenant
+from duckpond.api.dependencies import CurrentAccount
 from duckpond.api.exceptions import (
     BadRequestException,
     NotFoundException,
@@ -87,7 +87,7 @@ Example:
 )
 async def ingest_stream(
     dataset_name: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     file: UploadFile = File(..., description="Arrow IPC stream file"),
     batch_flush_count: int = 10,
     max_buffer_size_mb: int = 100,
@@ -97,7 +97,7 @@ async def ingest_stream(
 
     Args:
         dataset_name: Name of the target dataset
-        tenant_id: Authenticated tenant ID
+        account_id: Authenticated account ID
         file: Arrow IPC stream file
         batch_flush_count: Number of batches to buffer before flushing
         max_buffer_size_mb: Maximum buffer size in MB
@@ -116,7 +116,7 @@ async def ingest_stream(
     logger.info(
         f"Starting stream ingestion for dataset {dataset_name}",
         extra={
-            "tenant_id": tenant_id,
+            "account_id": account_id,
             "dataset_name": dataset_name,
             "filename": file.filename,
             "content_type": file.content_type,
@@ -126,7 +126,7 @@ async def ingest_stream(
     if file.content_type and "arrow" not in file.content_type.lower():
         logger.warning(
             f"Unexpected content type: {file.content_type}",
-            extra={"tenant_id": tenant_id, "content_type": file.content_type},
+            extra={"account_id": account_id, "content_type": file.content_type},
         )
 
     temp_file_path = None
@@ -146,7 +146,7 @@ async def ingest_stream(
             logger.info(
                 f"Uploaded stream file: {bytes_written} bytes",
                 extra={
-                    "tenant_id": tenant_id,
+                    "account_id": account_id,
                     "bytes_written": bytes_written,
                     "temp_path": str(temp_file_path),
                 },
@@ -155,20 +155,20 @@ async def ingest_stream(
         settings = get_settings()
         storage_root = (
             Path(settings.local_storage_path).expanduser()
-            / "tenants"
-            / tenant_id
+            / "accounts"
+            / account_id
             / "datasets"
             / dataset_name
         )
 
-        async with create_catalog_manager(tenant_id) as catalog:
+        async with create_catalog_manager(account_id) as catalog:
             try:
                 await catalog.get_dataset_metadata(dataset_name)
             except Exception as e:
                 if "not found" in str(e).lower():
                     logger.info(
                         f"Dataset {dataset_name} not found, will be created during ingestion",
-                        extra={"tenant_id": tenant_id, "dataset_name": dataset_name},
+                        extra={"account_id": account_id, "dataset_name": dataset_name},
                     )
                 else:
                     raise
@@ -185,7 +185,7 @@ async def ingest_stream(
             )
 
             metrics = await ingestor.ingest_stream(
-                tenant_id=tenant_id,
+                account_id=account_id,
                 dataset_name=dataset_name,
                 ipc_stream_path=temp_file_path,
                 storage_root=storage_root,
@@ -198,7 +198,7 @@ async def ingest_stream(
             logger.info(
                 f"Stream ingestion completed: {metrics['total_rows']} rows, {metrics['files_written']} files",
                 extra={
-                    "tenant_id": tenant_id,
+                    "account_id": account_id,
                     "dataset_name": dataset_name,
                     "metrics": metrics,
                     "duration_seconds": duration_seconds,
@@ -221,7 +221,7 @@ async def ingest_stream(
         logger.error(
             f"Stream ingestion failed: {error_msg}",
             extra={
-                "tenant_id": tenant_id,
+                "account_id": account_id,
                 "dataset_name": dataset_name,
                 "error": error_msg,
             },
@@ -240,12 +240,12 @@ async def ingest_stream(
                 temp_file_path.unlink()
                 logger.debug(
                     f"Cleaned up temporary file: {temp_file_path}",
-                    extra={"tenant_id": tenant_id, "temp_path": str(temp_file_path)},
+                    extra={"account_id": account_id, "temp_path": str(temp_file_path)},
                 )
             except Exception as e:
                 logger.warning(
                     f"Failed to cleanup temporary file: {e}",
-                    extra={"tenant_id": tenant_id, "temp_path": str(temp_file_path)},
+                    extra={"account_id": account_id, "temp_path": str(temp_file_path)},
                 )
 
 
@@ -341,7 +341,7 @@ Features:
 )
 async def prometheus_remote_write(
     dataset_name: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     request: Request,
     batch_size: int = 10000,
     include_metadata: bool = True,
@@ -350,7 +350,7 @@ async def prometheus_remote_write(
 
     Args:
         dataset_name: Name of the target dataset
-        tenant_id: Authenticated tenant ID
+        account_id: Authenticated account ID
         request: FastAPI request object
         batch_size: Batch size for Arrow conversion (default: 10000)
         include_metadata: Include metric metadata (default: True)
@@ -367,7 +367,7 @@ async def prometheus_remote_write(
     logger.info(
         f"Starting Prometheus ingestion for dataset {dataset_name}",
         extra={
-            "tenant_id": tenant_id,
+            "account_id": account_id,
             "dataset_name": dataset_name,
             "content_type": request.headers.get("content-type"),
             "content_encoding": request.headers.get("content-encoding"),
@@ -380,7 +380,7 @@ async def prometheus_remote_write(
     except ValueError as e:
         logger.error(
             f"Invalid Prometheus headers: {e}",
-            extra={"tenant_id": tenant_id, "error": str(e)},
+            extra={"account_id": account_id, "error": str(e)},
         )
         raise ValidationException(f"Invalid Prometheus request headers: {e}")
 
@@ -390,14 +390,14 @@ async def prometheus_remote_write(
     if not is_valid:
         logger.error(
             f"Invalid request size: {error_msg}",
-            extra={"tenant_id": tenant_id, "size": len(compressed_data)},
+            extra={"account_id": account_id, "size": len(compressed_data)},
         )
         raise ValidationException(f"Invalid request size: {error_msg}")
 
     logger.info(
         f"Received Prometheus write request: {len(compressed_data)} bytes",
         extra={
-            "tenant_id": tenant_id,
+            "account_id": account_id,
             "dataset_name": dataset_name,
             "compressed_size": len(compressed_data),
         },
@@ -407,13 +407,13 @@ async def prometheus_remote_write(
         settings = get_settings()
         storage_root = (
             Path(settings.local_storage_path).expanduser()
-            / "tenants"
-            / tenant_id
+            / "accounts"
+            / account_id
             / "datasets"
             / dataset_name
         )
 
-        async with create_catalog_manager(tenant_id) as catalog:
+        async with create_catalog_manager(account_id) as catalog:
             buffer_manager = BufferManager(
                 max_buffer_size_bytes=100 * 1024 * 1024,
                 max_queue_depth=100,
@@ -426,7 +426,7 @@ async def prometheus_remote_write(
             )
 
             metrics = await ingestor.ingest_metrics(
-                tenant_id=tenant_id,
+                account_id=account_id,
                 dataset_name=dataset_name,
                 compressed_data=compressed_data,
                 batch_size=batch_size,
@@ -439,7 +439,7 @@ async def prometheus_remote_write(
                 f"Prometheus ingestion completed: {metrics['total_rows']} samples, "
                 f"{metrics['files_written']} files, {duration_seconds:.2f}s",
                 extra={
-                    "tenant_id": tenant_id,
+                    "account_id": account_id,
                     "dataset_name": dataset_name,
                     "metrics": metrics,
                     "duration_seconds": duration_seconds,
@@ -462,7 +462,7 @@ async def prometheus_remote_write(
         logger.error(
             f"Prometheus ingestion validation failed: {error_msg}",
             extra={
-                "tenant_id": tenant_id,
+                "account_id": account_id,
                 "dataset_name": dataset_name,
                 "error": error_msg,
             },
@@ -474,7 +474,7 @@ async def prometheus_remote_write(
         logger.error(
             f"Prometheus ingestion failed: {error_msg}",
             extra={
-                "tenant_id": tenant_id,
+                "account_id": account_id,
                 "dataset_name": dataset_name,
                 "error": error_msg,
             },
@@ -492,13 +492,13 @@ async def prometheus_remote_write(
 )
 async def get_streaming_status(
     dataset_name: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ):
     """Get streaming status for dataset.
 
     Args:
         dataset_name: Name of the dataset
-        tenant_id: Authenticated tenant ID
+        account_id: Authenticated account ID
 
     Returns:
         Dictionary with streaming status
@@ -509,7 +509,7 @@ async def get_streaming_status(
     logger.info(
         f"Getting streaming status for dataset {dataset_name}",
         extra={
-            "tenant_id": tenant_id,
+            "account_id": account_id,
             "dataset_name": dataset_name,
         },
     )
@@ -518,13 +518,13 @@ async def get_streaming_status(
         settings = get_settings()
         storage_root = (
             Path(settings.local_storage_path).expanduser()
-            / "tenants"
-            / tenant_id
+            / "accounts"
+            / account_id
             / "datasets"
             / dataset_name
         )
 
-        async with create_catalog_manager(tenant_id) as catalog:
+        async with create_catalog_manager(account_id) as catalog:
             try:
                 metadata = await catalog.get_dataset_metadata(dataset_name)
 
@@ -567,7 +567,7 @@ async def get_streaming_status(
         logger.error(
             f"Failed to get streaming status: {error_msg}",
             extra={
-                "tenant_id": tenant_id,
+                "account_id": account_id,
                 "dataset_name": dataset_name,
                 "error": error_msg,
             },

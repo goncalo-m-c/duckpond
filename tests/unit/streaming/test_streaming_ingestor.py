@@ -89,14 +89,14 @@ class TestStreamingIngestor:
     ):
         """Test basic end-to-end ingestion."""
         ipc_path, batches = sample_ipc_stream
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "test_dataset"
         storage_root = tmp_path / "storage"
 
         ingestor = StreamingIngestor(catalog_manager, buffer_manager)
 
         metrics = await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,
@@ -126,14 +126,14 @@ class TestStreamingIngestor:
     ):
         """Test flushing every single batch."""
         ipc_path, batches = sample_ipc_stream
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "single_batch"
         storage_root = tmp_path / "storage"
 
         ingestor = StreamingIngestor(catalog_manager, buffer_manager)
 
         metrics = await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,
@@ -154,14 +154,14 @@ class TestStreamingIngestor:
     ):
         """Test flushing all batches together."""
         ipc_path, batches = sample_ipc_stream
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "large_batch"
         storage_root = tmp_path / "storage"
 
         ingestor = StreamingIngestor(catalog_manager, buffer_manager)
 
         metrics = await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,
@@ -179,7 +179,7 @@ class TestStreamingIngestor:
         tmp_path,
     ):
         """Test handling of missing IPC file."""
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "missing_file"
         storage_root = tmp_path / "storage"
         nonexistent_path = tmp_path / "nonexistent.arrow"
@@ -188,7 +188,7 @@ class TestStreamingIngestor:
 
         with pytest.raises(StreamingError, match="IPC stream file not found"):
             await ingestor.ingest_stream(
-                tenant_id=tenant_id,
+                account_id=account_id,
                 stream_name=stream_name,
                 ipc_stream_path=nonexistent_path,
                 storage_root=storage_root,
@@ -204,7 +204,7 @@ class TestStreamingIngestor:
     ):
         """Test schema validation during ingestion."""
         ipc_path, batches = sample_ipc_stream
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "schema_test"
         storage_root = tmp_path / "storage"
 
@@ -220,7 +220,7 @@ class TestStreamingIngestor:
 
         with pytest.raises(StreamingError):
             await ingestor.ingest_stream(
-                tenant_id=tenant_id,
+                account_id=account_id,
                 stream_name=stream_name,
                 ipc_stream_path=ipc_path,
                 storage_root=storage_root,
@@ -237,7 +237,7 @@ class TestStreamingIngestor:
     ):
         """Test handling of empty IPC stream."""
         ipc_path = tmp_path / "empty_stream.arrow"
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "empty_dataset"
         storage_root = tmp_path / "storage"
 
@@ -261,7 +261,7 @@ class TestStreamingIngestor:
         ingestor = StreamingIngestor(catalog_manager, buffer_manager)
 
         metrics = await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,
@@ -280,7 +280,7 @@ class TestStreamingIngestor:
         test_schema,
     ):
         """Test multiple concurrent ingestion operations."""
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
 
         # Create multiple IPC streams
         streams = []
@@ -323,7 +323,7 @@ class TestStreamingIngestor:
             storage_root = tmp_path / f"storage_{idx}"
 
             return await ingestor.ingest_stream(
-                tenant_id=tenant_id,
+                account_id=account_id,
                 stream_name=f"dataset_{idx}",
                 ipc_stream_path=ipc_path,
                 storage_root=storage_root,
@@ -350,7 +350,7 @@ class TestStreamingIngestor:
     ):
         """Test backpressure with small buffer."""
         ipc_path = tmp_path / "large_stream.arrow"
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "backpressure_test"
         storage_root = tmp_path / "storage"
 
@@ -384,7 +384,7 @@ class TestStreamingIngestor:
         ingestor = StreamingIngestor(catalog_manager, small_buffer)
 
         metrics = await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,
@@ -407,14 +407,14 @@ class TestStreamingIngestor:
     ):
         """Test that output Parquet files are valid and readable."""
         ipc_path, batches = sample_ipc_stream
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "parquet_test"
         storage_root = tmp_path / "storage"
 
         ingestor = StreamingIngestor(catalog_manager, buffer_manager)
 
         await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,
@@ -444,14 +444,14 @@ class TestStreamingIngestor:
     ):
         """Test that metrics are accurately reported."""
         ipc_path, batches = sample_ipc_stream
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "metrics_test"
         storage_root = tmp_path / "storage"
 
         ingestor = StreamingIngestor(catalog_manager, buffer_manager)
 
         metrics = await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,
@@ -486,7 +486,7 @@ class TestStreamingIngestor:
     ):
         """Test that storage root directory is created if missing."""
         ipc_path, batches = sample_ipc_stream
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "auto_create_test"
         storage_root = tmp_path / "nonexistent" / "nested" / "storage"
 
@@ -496,7 +496,7 @@ class TestStreamingIngestor:
         ingestor = StreamingIngestor(catalog_manager, buffer_manager)
 
         await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,
@@ -516,7 +516,7 @@ class TestStreamingIngestor:
     ):
         """Test proper coordination between producer and consumer."""
         ipc_path = tmp_path / "coord_stream.arrow"
-        tenant_id = str(uuid4())
+        account_id = str(uuid4())
         stream_name = "coordination_test"
         storage_root = tmp_path / "storage"
 
@@ -545,7 +545,7 @@ class TestStreamingIngestor:
         ingestor = StreamingIngestor(catalog_manager, buffer_manager)
 
         metrics = await ingestor.ingest_stream(
-            tenant_id=tenant_id,
+            account_id=account_id,
             stream_name=stream_name,
             ipc_stream_path=ipc_path,
             storage_root=storage_root,

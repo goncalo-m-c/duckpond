@@ -45,7 +45,7 @@ class TestInitCommand:
 
             # These should exist after init
             assert storage_path.exists()
-            assert (storage_path / "tenants").exists()
+            assert (storage_path / "accounts").exists()
             assert (storage_path / "temp").exists()
 
     def test_init_init_without_force_existing(self):

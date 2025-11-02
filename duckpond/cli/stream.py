@@ -72,7 +72,7 @@ def ingest(
         readable=True,
     ),
     stream: str = typer.Option(..., "--stream", "-d", help="Target stream name"),
-    tenant_id: str = typer.Option(..., "--tenant", "-t", help="Tenant ID (UUID)"),
+    account_id: str = typer.Option(..., "--account", "-t", help="Account ID (UUID)"),
     storage_path: Optional[Path] = typer.Option(
         None,
         "--storage",
@@ -121,7 +121,7 @@ def ingest(
     - ETL processes with large datasets
 
     Examples:
-        duckpond stream ingest data.arrow --tenant abc123 --stream events
+        duckpond stream ingest data.arrow --account abc123 --stream events
 
         duckpond stream ingest data.arrow -t abc123 -d logs \\
             --storage /data/warehouse/logs \\
@@ -136,8 +136,8 @@ def ingest(
         if storage_path is None:
             storage_path = (
                 Path(settings.local_storage_path)
-                / "tenants"
-                / tenant_id
+                / "accounts"
+                / account_id
                 / "streams"
                 / stream
             )
@@ -151,7 +151,7 @@ def ingest(
         print_info("🚀 Starting Arrow IPC ingestion")
         print_info(f"   Source: {ipc_file}")
         print_info(f"   Stream: {stream}")
-        print_info(f"   Tenant: {tenant_id}")
+        print_info(f"   Account: {account_id}")
         print_info(f"   Storage: {storage_path}")
         print_info(f"   Buffer: {max_buffer_mb}MB, Queue depth: {max_queue_depth}")
         print_info("")
@@ -166,7 +166,7 @@ def ingest(
             try:
                 from duckpond.catalog.manager import create_catalog_manager
 
-                catalog = asyncio.run(create_catalog_manager(tenant_id))
+                catalog = asyncio.run(create_catalog_manager(account_id))
             except Exception as e:
                 print_warning(f"Failed to initialize catalog: {e}")
                 print_info("Continuing without catalog registration")
@@ -187,7 +187,7 @@ def ingest(
 
                 metrics = asyncio.run(
                     ingestor.ingest_stream(
-                        tenant_id=tenant_id,
+                        account_id=account_id,
                         stream_name=stream,
                         ipc_stream_path=ipc_file,
                         storage_root=storage_path,
@@ -199,7 +199,7 @@ def ingest(
         else:
             metrics = asyncio.run(
                 ingestor.ingest_stream(
-                    tenant_id=tenant_id,
+                    account_id=account_id,
                     stream_name=stream,
                     ipc_stream_path=ipc_file,
                     storage_root=storage_path,
@@ -236,7 +236,7 @@ def ingest(
 
         logger.info(
             f"Ingested {metrics['total_rows']} rows into {stream} "
-            f"for tenant {tenant_id} in {duration:.2f}s"
+            f"for account {account_id} in {duration:.2f}s"
         )
 
     except typer.Exit:

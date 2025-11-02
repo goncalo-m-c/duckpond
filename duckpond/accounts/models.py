@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for tenant management."""
+"""SQLAlchemy ORM models for account management."""
 
 from datetime import datetime
 from typing import Optional
@@ -10,11 +10,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from duckpond.db.base import Base
 
 
-class Tenant(Base):
+class Account(Base):
     """
-    Tenant model representing a DuckPond tenant with isolated resources.
+    Account model representing a DuckPond account with isolated resources.
 
-    Each tenant has:
+    Each account has:
     - Unique identifier and name
     - API key authentication
     - DuckLake catalog configuration
@@ -23,21 +23,21 @@ class Tenant(Base):
     - Multiple API keys (one-to-many relationship)
     """
 
-    __tablename__ = "tenants"
+    __tablename__ = "accounts"
 
-    tenant_id: Mapped[str] = mapped_column(
+    account_id: Mapped[str] = mapped_column(
         String(64),
         primary_key=True,
         nullable=False,
-        comment="Unique tenant identifier with format tenant-{slug}",
+        comment="Unique account identifier with format account-{slug}",
     )
 
     name: Mapped[str] = mapped_column(
-        String(255), unique=True, nullable=False, comment="Unique tenant name"
+        String(255), unique=True, nullable=False, comment="Unique account name"
     )
 
     api_key_hash: Mapped[str] = mapped_column(
-        String(255), nullable=False, comment="Hashed API key for tenant authentication"
+        String(255), nullable=False, comment="Hashed API key for account authentication"
     )
 
     ducklake_catalog_url: Mapped[str] = mapped_column(
@@ -76,7 +76,7 @@ class Tenant(Base):
         DateTime,
         default=func.now(),
         nullable=False,
-        comment="Timestamp when tenant was created",
+        comment="Timestamp when account was created",
     )
 
     updated_at: Mapped[datetime] = mapped_column(
@@ -84,22 +84,22 @@ class Tenant(Base):
         default=func.now(),
         onupdate=func.now(),
         nullable=False,
-        comment="Timestamp when tenant was last updated",
+        comment="Timestamp when account was last updated",
     )
 
     api_keys: Mapped[list["APIKey"]] = relationship(
-        "APIKey", back_populates="tenant", cascade="all, delete-orphan", lazy="selectin"
+        "APIKey", back_populates="account", cascade="all, delete-orphan", lazy="selectin"
     )
 
     __table_args__ = (
-        Index("idx_tenants_storage_backend", "storage_backend"),
-        Index("idx_tenants_name", "name"),
+        Index("idx_accounts_storage_backend", "storage_backend"),
+        Index("idx_accounts_name", "name"),
     )
 
     def __repr__(self) -> str:
-        """String representation of Tenant."""
+        """String representation of Account."""
         return (
-            f"<Tenant(tenant_id='{self.tenant_id}', "
+            f"<Account(account_id='{self.account_id}', "
             f"name='{self.name}', "
             f"storage_backend='{self.storage_backend}')>"
         )
@@ -107,14 +107,14 @@ class Tenant(Base):
 
 class APIKey(Base):
     """
-    API Key model for tenant authentication.
+    API Key model for account authentication.
 
-    Each tenant can have multiple API keys with:
+    Each account can have multiple API keys with:
     - Unique key identifier and hash
     - Optional description
     - Expiration date
     - Last used timestamp
-    - Foreign key relationship to tenant (with cascade delete)
+    - Foreign key relationship to account (with cascade delete)
     """
 
     __tablename__ = "api_keys"
@@ -126,11 +126,11 @@ class APIKey(Base):
         comment="Unique API key identifier",
     )
 
-    tenant_id: Mapped[str] = mapped_column(
+    account_id: Mapped[str] = mapped_column(
         String(64),
-        ForeignKey("tenants.tenant_id", ondelete="CASCADE"),
+        ForeignKey("accounts.account_id", ondelete="CASCADE"),
         nullable=False,
-        comment="Tenant this API key belongs to",
+        comment="Account this API key belongs to",
     )
 
     key_prefix: Mapped[str] = mapped_column(
@@ -166,12 +166,12 @@ class APIKey(Base):
         DateTime, nullable=True, comment="Timestamp when API key expires"
     )
 
-    tenant: Mapped["Tenant"] = relationship(
-        "Tenant", back_populates="api_keys", lazy="selectin"
+    account: Mapped["Account"] = relationship(
+        "Account", back_populates="api_keys", lazy="selectin"
     )
 
     __table_args__ = (
-        Index("idx_api_keys_tenant", "tenant_id"),
+        Index("idx_api_keys_account", "account_id"),
         Index("idx_api_keys_hash", "key_hash"),
         Index("idx_api_keys_expires", "expires_at"),
     )
@@ -180,14 +180,19 @@ class APIKey(Base):
         """String representation of APIKey."""
         return (
             f"<APIKey(key_id='{self.key_id}', "
-            f"tenant_id='{self.tenant_id}', "
+            f"account_id='{self.account_id}', "
             f"expires_at={self.expires_at})>"
         )
 
 
-class TenantStatus:
-    """Legacy tenant status constants for CLI compatibility."""
+class AccountStatus:
+    """Account status constants for CLI compatibility."""
 
     ACTIVE = "active"
     SUSPENDED = "suspended"
     DELETED = "deleted"
+
+
+# Backward compatibility alias (deprecated)
+AccountStatus = AccountStatus
+Account = Account

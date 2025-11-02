@@ -7,9 +7,9 @@ for the DuckPond REST API.
 from duckpond.api.app import app, create_app
 from duckpond.api.dependencies import (
     APIKey,
-    CurrentTenant,
+    CurrentAccount,
     get_api_key,
-    get_current_tenant,
+    get_current_account,
 )
 from duckpond.api.exceptions import (
     BadRequestException,
@@ -26,15 +26,15 @@ from duckpond.api.middleware import (
     CORSHeadersMiddleware,
     LoggingMiddleware,
     RequestIDMiddleware,
-    TenantContextMiddleware,
+    AccountContextMiddleware,
 )
 
 __all__ = [
     "app",
     "create_app",
-    "get_current_tenant",
+    "get_current_account",
     "get_api_key",
-    "CurrentTenant",
+    "CurrentAccount",
     "APIKey",
     "DuckPondAPIException",
     "UnauthorizedException",
@@ -48,5 +48,5 @@ __all__ = [
     "RequestIDMiddleware",
     "LoggingMiddleware",
     "CORSHeadersMiddleware",
-    "TenantContextMiddleware",
+    "AccountContextMiddleware",
 ]

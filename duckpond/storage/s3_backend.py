@@ -28,7 +28,7 @@ from duckpond.storage.backend import StorageBackend
 class S3Backend(StorageBackend):
     """S3-compatible storage backend.
 
-    Stores files in S3 bucket at: s3://{bucket}/{tenant_id}/{remote_key}
+    Stores files in S3 bucket at: s3://{bucket}/{account_id}/{remote_key}
 
     Features:
     - Async operations via aioboto3
@@ -39,7 +39,7 @@ class S3Backend(StorageBackend):
 
     Example:
         backend = S3Backend(bucket="my-bucket", region="us-east-1")
-        await backend.upload_file(Path("local.csv"), "data/file.csv", "tenant-123")
+        await backend.upload_file(Path("local.csv"), "data/file.csv", "account-123")
 
         backend = S3Backend(
             bucket="my-bucket",
@@ -156,7 +156,7 @@ class S3Backend(StorageBackend):
         self,
         local_path: Path,
         remote_key: str,
-        tenant_id: str,
+        account_id: str,
         metadata: dict[str, str] | None = None,
         convert_to_parquet: bool = True,
     ) -> str:
@@ -164,13 +164,13 @@ class S3Backend(StorageBackend):
 
         Args:
             local_path: Local file path to upload
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
             metadata: Optional metadata dictionary to attach to file
             convert_to_parquet: Whether to convert the file to Parquet format using DuckDB
 
         Returns:
-            Full remote path WITH tenant prefix
+            Full remote path WITH account prefix
 
         Raises:
             FileNotFoundError: If local file doesn't exist
@@ -190,8 +190,8 @@ class S3Backend(StorageBackend):
 
         try:
             async with self._session.client(**self._get_client_kwargs()) as s3:
-                upload_full_key = self._build_uploads_tenant_key(
-                    tenant_id, upload_remote_key
+                upload_full_key = self._build_uploads_account_key(
+                    account_id, upload_remote_key
                 )
 
                 await s3.upload_file(
@@ -201,8 +201,8 @@ class S3Backend(StorageBackend):
                 )
 
                 if convert_to_parquet:
-                    table_full_key = self._build_tables_tenant_key(
-                        tenant_id, table_remote_key
+                    table_full_key = self._build_tables_account_key(
+                        account_id, table_remote_key
                     )
 
                     if original_extension == ".parquet":
@@ -258,23 +258,23 @@ class S3Backend(StorageBackend):
         self,
         remote_key: str,
         local_path: Path,
-        tenant_id: str,
+        account_id: str,
     ) -> None:
         """Download a file from S3.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
+            remote_key: Remote key WITHOUT account prefix
             local_path: Local file path to download to
-            tenant_id: Tenant ID for automatic prefixing
+            account_id: Account ID for automatic prefixing
 
         Raises:
             FileNotFoundError: If remote file doesn't exist
             StorageBackendError: If download fails
         """
-        full_key = self._build_tenant_key(tenant_id, remote_key)
+        full_key = self._build_account_key(account_id, remote_key)
 
         try:
-            if not await self.file_exists(remote_key, tenant_id):
+            if not await self.file_exists(remote_key, account_id):
                 raise DuckPondFileNotFoundError(full_key)
 
             local_path.parent.mkdir(parents=True, exist_ok=True)
@@ -295,21 +295,21 @@ class S3Backend(StorageBackend):
                 raise
             raise StorageBackendError("s3", "download_file", str(e)) from e
 
-    async def delete_file(self, remote_key: str, tenant_id: str) -> None:
+    async def delete_file(self, remote_key: str, account_id: str) -> None:
         """Delete a file from S3.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
 
         Raises:
             FileNotFoundError: If file doesn't exist
             StorageBackendError: If deletion fails
         """
-        full_key = self._build_tenant_key(tenant_id, remote_key)
+        full_key = self._build_account_key(account_id, remote_key)
 
         try:
-            if not await self.file_exists(remote_key, tenant_id):
+            if not await self.file_exists(remote_key, account_id):
                 raise DuckPondFileNotFoundError(full_key)
 
             async with self._session.client(**self._get_client_kwargs()) as s3:
@@ -327,13 +327,13 @@ class S3Backend(StorageBackend):
                 raise
             raise StorageBackendError("s3", "delete_file", str(e)) from e
 
-    async def delete_prefix(self, tenant_id: str) -> int:
-        """Delete all files with a tenant prefix.
+    async def delete_prefix(self, account_id: str) -> int:
+        """Delete all files with a account prefix.
 
         Uses batch deletion (max 1000 objects per request) for efficiency.
 
         Args:
-            tenant_id: Tenant ID - all files matching this prefix will be deleted
+            account_id: Account ID - all files matching this prefix will be deleted
 
         Returns:
             Number of files deleted
@@ -341,7 +341,7 @@ class S3Backend(StorageBackend):
         Raises:
             StorageBackendError: If deletion fails
         """
-        prefix = f"{tenant_id}/"
+        prefix = f"{account_id}/"
         deleted_count = 0
 
         try:
@@ -377,7 +377,7 @@ class S3Backend(StorageBackend):
     async def list_files(
         self,
         prefix: str,
-        tenant_id: str,
+        account_id: str,
         recursive: bool = True,
     ) -> list[str]:
         """List files matching a prefix.
@@ -385,17 +385,17 @@ class S3Backend(StorageBackend):
         Handles S3 pagination automatically for large file listings.
 
         Args:
-            prefix: Prefix to match (WITHOUT tenant prefix)
-            tenant_id: Tenant ID for automatic prefixing
+            prefix: Prefix to match (WITHOUT account prefix)
+            account_id: Account ID for automatic prefixing
             recursive: If True, list all files recursively; if False, only immediate children
 
         Returns:
-            List of file paths WITHOUT tenant prefix
+            List of file paths WITHOUT account prefix
 
         Raises:
             StorageBackendError: If listing fails
         """
-        full_prefix = self._build_tenant_key(tenant_id, prefix)
+        full_prefix = self._build_account_key(account_id, prefix)
         matching_files = []
 
         try:
@@ -414,7 +414,7 @@ class S3Backend(StorageBackend):
                     if "Contents" in page:
                         for obj in page["Contents"]:
                             key = obj["Key"]
-                            relative_key = key[len(f"{tenant_id}/") :]
+                            relative_key = key[len(f"{account_id}/") :]
 
                             if not recursive:
                                 remainder = relative_key[len(prefix) :].lstrip("/")
@@ -430,14 +430,14 @@ class S3Backend(StorageBackend):
         except Exception as e:
             raise StorageBackendError("s3", "list_files", str(e)) from e
 
-    async def file_exists(self, remote_key: str, tenant_id: str) -> bool:
+    async def file_exists(self, remote_key: str, account_id: str) -> bool:
         """Check if a file exists in S3.
 
         Uses HEAD object to check existence without downloading.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
 
         Returns:
             True if file exists, False otherwise
@@ -445,7 +445,7 @@ class S3Backend(StorageBackend):
         Raises:
             StorageBackendError: If check fails
         """
-        full_key = self._build_tenant_key(tenant_id, remote_key)
+        full_key = self._build_account_key(account_id, remote_key)
 
         try:
             async with self._session.client(**self._get_client_kwargs()) as s3:
@@ -464,14 +464,14 @@ class S3Backend(StorageBackend):
         except Exception as e:
             raise StorageBackendError("s3", "file_exists", str(e)) from e
 
-    async def get_file_size(self, remote_key: str, tenant_id: str) -> int:
+    async def get_file_size(self, remote_key: str, account_id: str) -> int:
         """Get file size in bytes.
 
         Uses HEAD object to get size without downloading.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
 
         Returns:
             File size in bytes
@@ -480,7 +480,7 @@ class S3Backend(StorageBackend):
             FileNotFoundError: If file doesn't exist
             StorageBackendError: If operation fails
         """
-        full_key = self._build_tenant_key(tenant_id, remote_key)
+        full_key = self._build_account_key(account_id, remote_key)
 
         try:
             async with self._session.client(**self._get_client_kwargs()) as s3:
@@ -502,13 +502,13 @@ class S3Backend(StorageBackend):
             raise StorageBackendError("s3", "get_file_size", str(e)) from e
 
     async def get_file_metadata(
-        self, remote_key: str, tenant_id: str
+        self, remote_key: str, account_id: str
     ) -> dict[str, Any]:
         """Get file metadata.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
 
         Returns:
             Dictionary containing metadata (size, modified_time, content_type, etc.)
@@ -517,7 +517,7 @@ class S3Backend(StorageBackend):
             FileNotFoundError: If file doesn't exist
             StorageBackendError: If operation fails
         """
-        full_key = self._build_tenant_key(tenant_id, remote_key)
+        full_key = self._build_account_key(account_id, remote_key)
 
         try:
             async with self._session.client(**self._get_client_kwargs()) as s3:
@@ -552,11 +552,11 @@ class S3Backend(StorageBackend):
                 raise
             raise StorageBackendError("s3", "get_file_metadata", str(e)) from e
 
-    async def get_storage_usage(self, tenant_id: str) -> int:
-        """Calculate total storage usage for a tenant.
+    async def get_storage_usage(self, account_id: str) -> int:
+        """Calculate total storage usage for a account.
 
         Args:
-            tenant_id: Tenant identifier
+            account_id: Account identifier
 
         Returns:
             Total storage usage in bytes
@@ -564,7 +564,7 @@ class S3Backend(StorageBackend):
         Raises:
             StorageBackendError: If calculation fails
         """
-        prefix = f"{tenant_id}/"
+        prefix = f"{account_id}/"
         total_size = 0
 
         try:
@@ -589,15 +589,15 @@ class S3Backend(StorageBackend):
     async def generate_presigned_url(
         self,
         remote_key: str,
-        tenant_id: str,
+        account_id: str,
         expires_seconds: int = 3600,
         method: str = "GET",
     ) -> str:
         """Generate a presigned URL for direct file access.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
             expires_seconds: URL expiration time in seconds (default: 1 hour)
             method: HTTP method (GET, PUT, etc.)
 
@@ -608,10 +608,10 @@ class S3Backend(StorageBackend):
             FileNotFoundError: If file doesn't exist (for GET URLs)
             StorageBackendError: If URL generation fails
         """
-        full_key = self._build_tenant_key(tenant_id, remote_key)
+        full_key = self._build_account_key(account_id, remote_key)
 
         if method.upper() == "GET":
-            if not await self.file_exists(remote_key, tenant_id):
+            if not await self.file_exists(remote_key, account_id):
                 raise DuckPondFileNotFoundError(full_key)
 
         try:

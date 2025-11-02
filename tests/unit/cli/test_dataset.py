@@ -12,8 +12,8 @@ runner = CliRunner()
 class TestDatasetList:
     """Tests for dataset list command."""
 
-    def test_list_missing_tenant(self):
-        """Test list without required tenant parameter."""
+    def test_list_missing_account(self):
+        """Test list without required account parameter."""
         result = runner.invoke(app, ["dataset", "list"])
         assert result.exit_code == 2
         # Error messages go to stderr in Typer
@@ -24,8 +24,8 @@ class TestDatasetList:
 class TestDatasetGet:
     """Tests for dataset get command."""
 
-    def test_get_missing_tenant(self):
-        """Test get without required tenant parameter."""
+    def test_get_missing_account(self):
+        """Test get without required account parameter."""
         result = runner.invoke(app, ["dataset", "get", "test-dataset"])
         assert result.exit_code == 2
         error_output = result.stdout + result.stderr
@@ -33,7 +33,7 @@ class TestDatasetGet:
 
     def test_get_missing_dataset_name(self):
         """Test get without dataset name."""
-        result = runner.invoke(app, ["dataset", "get", "--tenant", "test-tenant"])
+        result = runner.invoke(app, ["dataset", "get", "--account", "test-account"])
         assert result.exit_code == 2
         error_output = result.stdout + result.stderr
         assert "Missing argument" in error_output or "required" in error_output.lower()
@@ -47,7 +47,7 @@ class TestDatasetDelete:
         """Test delete requires --force in non-interactive mode."""
         result = runner.invoke(
             app,
-            ["dataset", "delete", "test-dataset", "--tenant", "test-tenant"],
+            ["dataset", "delete", "test-dataset", "--account", "test-account"],
         )
         assert result.exit_code == 1
         error_output = result.stdout + result.stderr
@@ -55,8 +55,8 @@ class TestDatasetDelete:
             "Cannot confirm deletion" in error_output or "force" in error_output.lower()
         )
 
-    def test_delete_missing_tenant(self):
-        """Test delete without required tenant parameter."""
+    def test_delete_missing_account(self):
+        """Test delete without required account parameter."""
         result = runner.invoke(
             app,
             ["dataset", "delete", "test-dataset", "--force"],
@@ -69,8 +69,8 @@ class TestDatasetDelete:
 class TestDatasetUpload:
     """Tests for dataset upload command."""
 
-    def test_upload_missing_tenant(self, tmp_path):
-        """Test upload without required tenant parameter."""
+    def test_upload_missing_account(self, tmp_path):
+        """Test upload without required account parameter."""
         test_file = tmp_path / "test.csv"
         test_file.write_text("data")
 
@@ -91,8 +91,8 @@ class TestDatasetUpload:
                 "upload",
                 "test-dataset",
                 "/nonexistent/file.csv",
-                "--tenant",
-                "test-tenant",
+                "--account",
+                "test-account",
             ],
         )
         assert result.exit_code == 2
@@ -106,7 +106,7 @@ class TestDatasetUpload:
 
         result = runner.invoke(
             app,
-            ["dataset", "upload", str(test_file), "--tenant", "test-tenant"],
+            ["dataset", "upload", str(test_file), "--account", "test-account"],
         )
         assert result.exit_code == 2
         error_output = result.stdout + result.stderr
@@ -120,8 +120,8 @@ class TestDatasetUpload:
 class TestDatasetRegister:
     """Tests for dataset register command."""
 
-    def test_register_missing_tenant(self):
-        """Test register without required tenant parameter."""
+    def test_register_missing_account(self):
+        """Test register without required account parameter."""
         result = runner.invoke(
             app,
             ["dataset", "register", "test-dataset"],
@@ -134,7 +134,7 @@ class TestDatasetRegister:
         """Test register without dataset name."""
         result = runner.invoke(
             app,
-            ["dataset", "register", "--tenant", "test-tenant"],
+            ["dataset", "register", "--account", "test-account"],
         )
         assert result.exit_code == 2
         error_output = result.stdout + result.stderr
@@ -144,8 +144,8 @@ class TestDatasetRegister:
 class TestDatasetSnapshots:
     """Tests for dataset snapshots command."""
 
-    def test_snapshots_missing_tenant(self):
-        """Test snapshots without required tenant parameter."""
+    def test_snapshots_missing_account(self):
+        """Test snapshots without required account parameter."""
         result = runner.invoke(
             app,
             ["dataset", "snapshots", "test-dataset"],
@@ -158,7 +158,7 @@ class TestDatasetSnapshots:
         """Test snapshots without dataset name."""
         result = runner.invoke(
             app,
-            ["dataset", "snapshots", "--tenant", "test-tenant"],
+            ["dataset", "snapshots", "--account", "test-account"],
         )
         assert result.exit_code == 2
         error_output = result.stdout + result.stderr
@@ -246,24 +246,24 @@ class TestDatasetIntegration:
 class TestDatasetParameterValidation:
     """Tests for parameter validation across dataset commands."""
 
-    def test_list_accepts_tenant(self):
-        """Test that list command accepts tenant parameter."""
+    def test_list_accepts_account(self):
+        """Test that list command accepts account parameter."""
         result = runner.invoke(app, ["dataset", "list", "--help"])
         assert result.exit_code == 0
-        assert "--tenant" in result.stdout or "-t" in result.stdout
+        assert "--account" in result.stdout or "-t" in result.stdout
 
-    def test_get_accepts_tenant_and_name(self):
-        """Test that get command accepts tenant and dataset name."""
+    def test_get_accepts_account_and_name(self):
+        """Test that get command accepts account and dataset name."""
         result = runner.invoke(app, ["dataset", "get", "--help"])
         assert result.exit_code == 0
-        assert "--tenant" in result.stdout or "-t" in result.stdout
+        assert "--account" in result.stdout or "-t" in result.stdout
         assert "DATASET_NAME" in result.stdout or "dataset" in result.stdout.lower()
 
     def test_upload_accepts_required_params(self):
         """Test that upload command accepts required parameters."""
         result = runner.invoke(app, ["dataset", "upload", "--help"])
         assert result.exit_code == 0
-        assert "--tenant" in result.stdout or "-t" in result.stdout
+        assert "--account" in result.stdout or "-t" in result.stdout
         assert "--catalog" in result.stdout or "-c" in result.stdout
         assert "FILE_PATH" in result.stdout or "file" in result.stdout.lower()
 

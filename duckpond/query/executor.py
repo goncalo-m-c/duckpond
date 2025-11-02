@@ -9,7 +9,7 @@ import duckdb
 import pyarrow as pa
 
 from duckpond.exceptions import QueryExecutionError, QueryTimeoutError
-from duckpond.query.ducklake import TenantDuckLakeManager
+from duckpond.query.ducklake import AccountDuckLakeManager
 from duckpond.query.models import QueryMetrics, QueryResult
 from duckpond.query.validator import SQLValidator, sanitize_for_logging
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class QueryExecutor:
     """
-    Execute SQL queries against tenant's DuckLake catalog.
+    Execute SQL queries against account's DuckLake catalog.
 
     This class provides a high-level interface for executing SQL queries
     with security validation, format conversion, and metrics collection.
@@ -42,23 +42,23 @@ class QueryExecutor:
 
     def __init__(
         self,
-        ducklake_manager: TenantDuckLakeManager,
+        ducklake_manager: AccountDuckLakeManager,
         validator: SQLValidator | None = None,
     ) -> None:
         """
         Initialize query executor.
 
         Args:
-            ducklake_manager: Tenant's DuckLake manager with connection pool
+            ducklake_manager: Account's DuckLake manager with connection pool
             validator: SQL validator (uses default if not provided)
         """
         self.ducklake_manager = ducklake_manager
         self.validator = validator or SQLValidator()
-        self.tenant_id = ducklake_manager.tenant.tenant_id
+        self.account_id = ducklake_manager.account.account_id
 
         logger.debug(
-            f"Initialized QueryExecutor for tenant {self.tenant_id}",
-            extra={"tenant_id": self.tenant_id},
+            f"Initialized QueryExecutor for account {self.account_id}",
+            extra={"account_id": self.account_id},
         )
 
     async def execute_query(
@@ -93,7 +93,7 @@ class QueryExecutor:
         logger.info(
             "Executing query",
             extra={
-                "tenant_id": self.tenant_id,
+                "account_id": self.account_id,
                 "query_hash": query_hash,
                 "output_format": output_format,
                 "limit": limit,
@@ -126,7 +126,7 @@ class QueryExecutor:
             logger.info(
                 "Query executed successfully",
                 extra={
-                    "tenant_id": self.tenant_id,
+                    "account_id": self.account_id,
                     "query_hash": query_hash,
                     "row_count": result.row_count,
                     "execution_time": execution_time,
@@ -149,7 +149,7 @@ class QueryExecutor:
             logger.error(
                 "Query timeout",
                 extra={
-                    "tenant_id": self.tenant_id,
+                    "account_id": self.account_id,
                     "query_hash": query_hash,
                     "timeout_seconds": timeout_seconds,
                 },
@@ -170,7 +170,7 @@ class QueryExecutor:
             logger.error(
                 f"Query execution failed: {e}",
                 extra={
-                    "tenant_id": self.tenant_id,
+                    "account_id": self.account_id,
                     "query_hash": query_hash,
                     "error": str(e),
                 },
@@ -268,15 +268,15 @@ class QueryExecutor:
         Args:
             conn: DuckDB connection
             catalog_name: Name of the catalog to attach (e.g., 'default')
-                         The catalog path will be resolved from tenant's data directory
+                         The catalog path will be resolved from account's data directory
 
         Raises:
             ValueError: If catalog path cannot be resolved
             QueryExecutionError: If ATTACH fails
         """
         try:
-            tenant = self.ducklake_manager.tenant
-            catalog_path = self._resolve_catalog_path(tenant, catalog_name)
+            account = self.ducklake_manager.account
+            catalog_path = self._resolve_catalog_path(account, catalog_name)
 
             ducklake_url = f"sqlite:{catalog_path}"
             attach_sql = (
@@ -293,12 +293,12 @@ class QueryExecutor:
                 f"Failed to attach catalog '{catalog_name}': {e}", query=catalog_name
             ) from e
 
-    def _resolve_catalog_path(self, tenant, catalog_name: str) -> str:
+    def _resolve_catalog_path(self, account, catalog_name: str) -> str:
         """
-        Resolve catalog path from tenant configuration.
+        Resolve catalog path from account configuration.
 
         Args:
-            tenant: Tenant object
+            account: Account object
             catalog_name: Name of the catalog
 
         Returns:
@@ -312,17 +312,17 @@ class QueryExecutor:
 
         settings = get_settings()
 
-        tenant_data_dir = (
+        account_data_dir = (
             Path(settings.local_storage_path).expanduser()
-            / "tenants"
-            / tenant.tenant_id
+            / "accounts"
+            / account.account_id
         )
-        catalog_path = tenant_data_dir / f"{catalog_name}_catalog.sqlite"
+        catalog_path = account_data_dir / f"{catalog_name}_catalog.sqlite"
 
         if not catalog_path.exists():
             raise ValueError(
                 f"Catalog file not found: {catalog_path}. "
-                f"Available catalogs should be in {tenant_data_dir}"
+                f"Available catalogs should be in {account_data_dir}"
             )
 
         return str(catalog_path)
@@ -364,7 +364,7 @@ class QueryExecutor:
             error_type: Type of error if failed
         """
         metrics = QueryMetrics(
-            tenant_id=self.tenant_id,
+            account_id=self.account_id,
             query_hash=query_hash,
             execution_time_seconds=execution_time,
             row_count=row_count,
@@ -427,7 +427,7 @@ class QueryExecutor:
             Dictionary with query statistics
         """
         return {
-            "tenant_id": self.tenant_id,
+            "account_id": self.account_id,
             "available_connections": self.ducklake_manager.available_connections,
             "total_connections": self.ducklake_manager.total_connections,
             "is_initialized": self.ducklake_manager.is_initialized,

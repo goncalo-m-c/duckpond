@@ -26,35 +26,35 @@ class ConfigurationError(DuckPondError):
     pass
 
 
-class TenantError(DuckPondError):
-    """Base class for tenant-related errors."""
+class AccountError(DuckPondError):
+    """Base class for account-related errors."""
 
     pass
 
 
-class TenantNotFoundError(TenantError):
-    """Tenant does not exist."""
+class AccountNotFoundError(AccountError):
+    """Account does not exist."""
 
-    def __init__(self, tenant_id: str) -> None:
-        super().__init__(f"Tenant not found: {tenant_id}", tenant_id=tenant_id)
-
-
-class TenantAlreadyExistsError(TenantError):
-    """Tenant already exists."""
-
-    def __init__(self, tenant_id: str) -> None:
-        super().__init__(f"Tenant already exists: {tenant_id}", tenant_id=tenant_id)
+    def __init__(self, account_id: str) -> None:
+        super().__init__(f"Account not found: {account_id}", account_id=account_id)
 
 
-class QuotaExceededError(TenantError):
-    """Tenant quota exceeded."""
+class AccountAlreadyExistsError(AccountError):
+    """Account already exists."""
+
+    def __init__(self, account_id: str) -> None:
+        super().__init__(f"Account already exists: {account_id}", account_id=account_id)
+
+
+class QuotaExceededError(AccountError):
+    """Account quota exceeded."""
 
     def __init__(
-        self, tenant_id: str, quota_type: str, limit: Any, current: Any
+        self, account_id: str, quota_type: str, limit: Any, current: Any
     ) -> None:
         super().__init__(
             f"Quota exceeded for {quota_type}: {current}/{limit}",
-            tenant_id=tenant_id,
+            account_id=account_id,
             quota_type=quota_type,
             limit=limit,
             current=current,
@@ -102,10 +102,10 @@ class StorageBackendError(StorageError):
 class InsufficientStorageError(StorageError):
     """Insufficient storage available for operation."""
 
-    def __init__(self, tenant_id: str, required: int, available: int) -> None:
+    def __init__(self, account_id: str, required: int, available: int) -> None:
         super().__init__(
-            f"Insufficient storage for tenant {tenant_id}: required {required} bytes, available {available} bytes",
-            tenant_id=tenant_id,
+            f"Insufficient storage for account {account_id}: required {required} bytes, available {available} bytes",
+            account_id=account_id,
             required=required,
             available=available,
         )
@@ -136,10 +136,10 @@ class QueryMemoryLimitError(QueryError):
 class ConcurrentQueryLimitError(QueryError):
     """Concurrent query limit exceeded."""
 
-    def __init__(self, tenant_id: str, limit: int) -> None:
+    def __init__(self, account_id: str, limit: int) -> None:
         super().__init__(
-            f"Concurrent query limit exceeded for tenant {tenant_id}: {limit}",
-            tenant_id=tenant_id,
+            f"Concurrent query limit exceeded for account {account_id}: {limit}",
+            account_id=account_id,
             limit=limit,
         )
 
@@ -214,10 +214,10 @@ class SchemaInferenceError(IngestionError):
 def get_http_status(error: Exception) -> int:
     """Map exception to HTTP status code."""
     status_map = {
-        TenantNotFoundError: 404,
+        AccountNotFoundError: 404,
         DatasetNotFoundError: 404,
         FileNotFoundError: 404,
-        TenantAlreadyExistsError: 409,
+        AccountAlreadyExistsError: 409,
         InvalidAPIKeyError: 401,
         AuthenticationError: 401,
         QuotaExceededError: 429,

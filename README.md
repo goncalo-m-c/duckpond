@@ -4,12 +4,12 @@ A self-hosted data warehouse for teams who need fast analytics without the enter
 
 ## What it does
 
-DuckPond is a multi-tenant analytics platform you run on your own infrastructure:
+DuckPond is a multi-account analytics platform you run on your own infrastructure:
 
 - Upload CSV, JSON, or Parquet files that get auto-converted to efficient Parquet storage
 - Stream data using Arrow IPC or Prometheus remote write protocol
 - Query everything with SQL through DuckDB's fast analytical engine
-- Give each customer their own isolated tenant with a DuckLake catalog
+- Give each customer their own isolated account with a DuckLake catalog
 - No cloud fees, no vendor lock-in, no per-query billing
 
 Think of it as the data warehouse you'd build yourself if you had time, but without spending six months on it.
@@ -20,14 +20,14 @@ You should consider DuckPond if:
 
 - You're building SaaS analytics and don't want Snowflake bills eating your margins
 - You have gigabytes of data, not petabytes, and distributed systems seem excessive
-- You want multi-tenant isolation without configuring complex RBAC systems
+- You want multi-account isolation without configuring complex RBAC systems
 - You need to store Prometheus metrics longer than two weeks
 - You prefer owning your infrastructure over monthly SaaS subscriptions
 
 
 ## How it works
 
-Each tenant gets:
+Each account gets:
 - Their own DuckLake catalog stored in SQLite (or PostgreSQL for production)
 - Isolated storage path for Parquet files
 - API keys for authentication
@@ -35,8 +35,8 @@ Each tenant gets:
 
 When you upload files:
 1. Files are validated and converted to Parquet format
-2. Parquet files are stored in the tenant's storage path
-3. Tables are registered in the tenant's DuckLake catalog
+2. Parquet files are stored in the account's storage path
+3. Tables are registered in the account's DuckLake catalog
 4. Data becomes queryable immediately via SQL
 
 When you run queries:
@@ -70,7 +70,7 @@ These are single-machine numbers. No cluster required.
 Version 25.1 - Active development
 
 What works now:
-- Multi-tenant accounts with isolated catalogs
+- Multi-account system with isolated catalogs
 - File uploads with auto-conversion to Parquet
 - Arrow IPC and Prometheus streaming
 - SQL queries via DuckDB

@@ -2,7 +2,7 @@
 
 This module provides a local filesystem implementation of the StorageBackend
 interface with support for:
-- Path-based tenant isolation using directories
+- Path-based account isolation using directories
 - Async file I/O using aiofiles
 - Proper error handling and path validation
 - Metadata storage alongside files
@@ -30,7 +30,7 @@ from duckpond.storage.backend import StorageBackend
 class LocalBackend(StorageBackend):
     """Local filesystem storage backend.
 
-    Stores files at: {base_path}/{tenant_id}/{remote_key}
+    Stores files at: {base_path}/{account_id}/{remote_key}
 
     Features:
     - Automatic directory creation
@@ -40,24 +40,24 @@ class LocalBackend(StorageBackend):
 
     Example:
         backend = LocalBackend(Path("~/.duckpond/data"))
-        await backend.upload_file(Path("local.csv"), "data/file.csv", "tenant-123")
+        await backend.upload_file(Path("local.csv"), "data/file.csv", "account-123")
     """
 
     def __init__(self, base_path: Path) -> None:
         """Initialize local filesystem backend.
 
         Args:
-            base_path: Root directory for all tenant data
+            base_path: Root directory for all account data
         """
         self.base_path = Path(base_path).resolve()
         self.base_path.mkdir(parents=True, exist_ok=True)
 
-    def _get_table_full_path(self, tenant_id: str, remote_key: str) -> Path:
+    def _get_table_full_path(self, account_id: str, remote_key: str) -> Path:
         """Get full filesystem path for a file.
 
         Args:
-            tenant_id: Tenant identifier
-            remote_key: Remote key without tenant prefix
+            account_id: Account identifier
+            remote_key: Remote key without account prefix
 
         Returns:
             Absolute path to file
@@ -65,7 +65,7 @@ class LocalBackend(StorageBackend):
         Raises:
             StorageBackendError: If path would escape base directory
         """
-        full_key = self._build_tables_tenant_key(tenant_id, remote_key)
+        full_key = self._build_tables_account_key(account_id, remote_key)
         full_path = (self.base_path / full_key).resolve()
 
         try:
@@ -79,12 +79,12 @@ class LocalBackend(StorageBackend):
 
         return full_path
 
-    def _get_upload_full_path(self, tenant_id: str, remote_key: str) -> Path:
+    def _get_upload_full_path(self, account_id: str, remote_key: str) -> Path:
         """Get full filesystem path for a file.
 
         Args:
-            tenant_id: Tenant identifier
-            remote_key: Remote key without tenant prefix
+            account_id: Account identifier
+            remote_key: Remote key without account prefix
 
         Returns:
             Absolute path to file
@@ -92,7 +92,7 @@ class LocalBackend(StorageBackend):
         Raises:
             StorageBackendError: If path would escape base directory
         """
-        full_key = self._build_uploads_tenant_key(tenant_id, remote_key)
+        full_key = self._build_uploads_account_key(account_id, remote_key)
         full_path = (self.base_path / full_key).resolve()
 
         try:
@@ -106,12 +106,12 @@ class LocalBackend(StorageBackend):
 
         return full_path
 
-    def _get_full_path(self, tenant_id: str, remote_key: str) -> Path:
-        """Get full filesystem path for a file using the standard tenant key.
+    def _get_full_path(self, account_id: str, remote_key: str) -> Path:
+        """Get full filesystem path for a file using the standard account key.
 
         Args:
-            tenant_id: Tenant identifier
-            remote_key: Remote key without tenant prefix
+            account_id: Account identifier
+            remote_key: Remote key without account prefix
 
         Returns:
             Absolute path to file
@@ -119,7 +119,7 @@ class LocalBackend(StorageBackend):
         Raises:
             StorageBackendError: If path would escape base directory
         """
-        full_key = self._build_tenant_key(tenant_id, remote_key)
+        full_key = self._build_account_key(account_id, remote_key)
         full_path = (self.base_path / full_key).resolve()
 
         try:
@@ -213,7 +213,7 @@ class LocalBackend(StorageBackend):
         self,
         local_path: Path | str,
         remote_key: str,
-        tenant_id: str,
+        account_id: str,
         metadata: dict[str, str] | None = None,
         convert_to_parquet: bool = True,
         conversion_config: ConversionConfig | None = None,
@@ -222,15 +222,15 @@ class LocalBackend(StorageBackend):
 
         Args:
             local_path: Local file path to upload (Path object or string)
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
             metadata: Optional metadata dictionary to attach to file
             convert_to_parquet: Whether to convert the file to Parquet format
             conversion_config: Optional conversion configuration
 
         Returns:
             Dictionary containing:
-                - remote_path: Full remote path WITH tenant prefix
+                - remote_path: Full remote path WITH account prefix
                 - metrics: Conversion metrics (if converted)
 
         Raises:
@@ -251,7 +251,7 @@ class LocalBackend(StorageBackend):
 
         try:
             remote_upload_path = self._get_upload_full_path(
-                tenant_id, upload_remote_key
+                account_id, upload_remote_key
             )
             remote_upload_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -263,7 +263,7 @@ class LocalBackend(StorageBackend):
             if convert_to_parquet:
                 if original_extension == ".parquet":
                     remote_table_path = self._get_table_full_path(
-                        tenant_id, table_remote_key
+                        account_id, table_remote_key
                     )
                     remote_table_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -281,7 +281,7 @@ class LocalBackend(StorageBackend):
                         )
 
                         remote_table_path = self._get_table_full_path(
-                            tenant_id, table_remote_key
+                            account_id, table_remote_key
                         )
                         remote_table_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -302,15 +302,15 @@ class LocalBackend(StorageBackend):
                     pass
 
                 return {
-                    "remote_path": self._build_tables_tenant_key(
-                        tenant_id, table_remote_key
+                    "remote_path": self._build_tables_account_key(
+                        account_id, table_remote_key
                     ),
                     "metrics": conversion_metrics,
                 }
             else:
                 return {
-                    "remote_path": self._build_uploads_tenant_key(
-                        tenant_id, upload_remote_key
+                    "remote_path": self._build_uploads_account_key(
+                        account_id, upload_remote_key
                     ),
                     "metrics": None,
                 }
@@ -329,27 +329,27 @@ class LocalBackend(StorageBackend):
         self,
         remote_key: str,
         local_path: Path | str,
-        tenant_id: str,
+        account_id: str,
     ) -> None:
         pass
 
-    async def delete_file(self, remote_key: str, tenant_id: str) -> None:
+    async def delete_file(self, remote_key: str, account_id: str) -> None:
         """Delete a file from local storage.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
 
         Raises:
             FileNotFoundError: If file doesn't exist
             StorageBackendError: If deletion fails
         """
         try:
-            remote_path = self._get_full_path(tenant_id, remote_key)
+            remote_path = self._get_full_path(account_id, remote_key)
 
             if not remote_path.exists():
                 raise DuckPondFileNotFoundError(
-                    self._build_tenant_key(tenant_id, remote_key)
+                    self._build_account_key(account_id, remote_key)
                 )
 
             await aiofiles.os.remove(remote_path)
@@ -363,11 +363,11 @@ class LocalBackend(StorageBackend):
                 raise
             raise StorageBackendError("local", "delete_file", str(e)) from e
 
-    async def delete_prefix(self, tenant_id: str) -> int:
-        """Delete all files with a tenant prefix.
+    async def delete_prefix(self, account_id: str) -> int:
+        """Delete all files with a account prefix.
 
         Args:
-            tenant_id: Tenant ID - all files matching this prefix will be deleted
+            account_id: Account ID - all files matching this prefix will be deleted
 
         Returns:
             Number of files deleted
@@ -376,13 +376,13 @@ class LocalBackend(StorageBackend):
             StorageBackendError: If deletion fails
         """
         try:
-            tenant_path = self.base_path / tenant_id
+            account_path = self.base_path / account_id
 
-            if not tenant_path.exists():
+            if not account_path.exists():
                 return 0
 
             count = 0
-            for root, dirs, files in os.walk(tenant_path, topdown=False):
+            for root, dirs, files in os.walk(account_path, topdown=False):
                 for name in files:
                     if not name.endswith(".metadata.json"):
                         file_path = Path(root) / name
@@ -401,7 +401,7 @@ class LocalBackend(StorageBackend):
                         pass
 
             try:
-                await aiofiles.os.rmdir(tenant_path)
+                await aiofiles.os.rmdir(account_path)
             except OSError:
                 pass
 
@@ -413,28 +413,28 @@ class LocalBackend(StorageBackend):
     async def list_files(
         self,
         prefix: str,
-        tenant_id: str,
+        account_id: str,
         recursive: bool = True,
     ) -> list[str]:
         """List files matching a prefix.
 
         Args:
-            prefix: Prefix to match (WITHOUT tenant prefix)
-            tenant_id: Tenant ID for automatic prefixing
+            prefix: Prefix to match (WITHOUT account prefix)
+            account_id: Account ID for automatic prefixing
             recursive: If True, list all files recursively; if False, only immediate children
 
         Returns:
-            List of file paths WITHOUT tenant prefix
+            List of file paths WITHOUT account prefix
 
         Raises:
             StorageBackendError: If listing fails
         """
         try:
-            tenant_path = self.base_path / tenant_id
-            if not tenant_path.exists():
+            account_path = self.base_path / account_id
+            if not account_path.exists():
                 return []
 
-            prefix_path = tenant_path / prefix.lstrip("/")
+            prefix_path = account_path / prefix.lstrip("/")
 
             matching_files = []
 
@@ -443,13 +443,13 @@ class LocalBackend(StorageBackend):
                     for name in files:
                         if not name.endswith(".metadata.json"):
                             file_path = Path(root) / name
-                            relative_path = file_path.relative_to(tenant_path)
+                            relative_path = file_path.relative_to(account_path)
                             matching_files.append(str(relative_path))
             else:
                 if prefix_path.exists() and prefix_path.is_dir():
                     for item in prefix_path.iterdir():
                         if item.is_file() and not item.name.endswith(".metadata.json"):
-                            relative_path = item.relative_to(tenant_path)
+                            relative_path = item.relative_to(account_path)
                             matching_files.append(str(relative_path))
 
             return sorted(matching_files)
@@ -457,12 +457,12 @@ class LocalBackend(StorageBackend):
         except Exception as e:
             raise StorageBackendError("local", "list_files", str(e)) from e
 
-    async def file_exists(self, remote_key: str, tenant_id: str) -> bool:
+    async def file_exists(self, remote_key: str, account_id: str) -> bool:
         """Check if a file exists in local storage.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
 
         Returns:
             True if file exists, False otherwise
@@ -471,17 +471,17 @@ class LocalBackend(StorageBackend):
             StorageBackendError: If check fails
         """
         try:
-            remote_path = self._get_full_path(tenant_id, remote_key)
+            remote_path = self._get_full_path(account_id, remote_key)
             return remote_path.exists() and remote_path.is_file()
         except Exception as e:
             raise StorageBackendError("local", "file_exists", str(e)) from e
 
-    async def get_file_size(self, remote_key: str, tenant_id: str) -> int:
+    async def get_file_size(self, remote_key: str, account_id: str) -> int:
         """Get file size in bytes.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
 
         Returns:
             File size in bytes
@@ -491,11 +491,11 @@ class LocalBackend(StorageBackend):
             StorageBackendError: If operation fails
         """
         try:
-            remote_path = self._get_full_path(tenant_id, remote_key)
+            remote_path = self._get_full_path(account_id, remote_key)
 
             if not remote_path.exists():
                 raise DuckPondFileNotFoundError(
-                    self._build_tenant_key(tenant_id, remote_key)
+                    self._build_account_key(account_id, remote_key)
                 )
 
             return remote_path.stat().st_size
@@ -506,13 +506,13 @@ class LocalBackend(StorageBackend):
             raise StorageBackendError("local", "get_file_size", str(e)) from e
 
     async def get_file_metadata(
-        self, remote_key: str, tenant_id: str
+        self, remote_key: str, account_id: str
     ) -> dict[str, Any]:
         """Get file metadata.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
 
         Returns:
             Dictionary containing metadata
@@ -522,11 +522,11 @@ class LocalBackend(StorageBackend):
             StorageBackendError: If operation fails
         """
         try:
-            remote_path = self._get_full_path(tenant_id, remote_key)
+            remote_path = self._get_full_path(account_id, remote_key)
 
             if not remote_path.exists():
                 raise DuckPondFileNotFoundError(
-                    self._build_tenant_key(tenant_id, remote_key)
+                    self._build_account_key(account_id, remote_key)
                 )
 
             metadata_path = self._get_metadata_path(remote_path)
@@ -546,11 +546,11 @@ class LocalBackend(StorageBackend):
                 raise
             raise StorageBackendError("local", "get_file_metadata", str(e)) from e
 
-    async def get_storage_usage(self, tenant_id: str) -> int:
-        """Calculate total storage usage for a tenant.
+    async def get_storage_usage(self, account_id: str) -> int:
+        """Calculate total storage usage for a account.
 
         Args:
-            tenant_id: Tenant identifier
+            account_id: Account identifier
 
         Returns:
             Total storage usage in bytes
@@ -559,13 +559,13 @@ class LocalBackend(StorageBackend):
             StorageBackendError: If calculation fails
         """
         try:
-            tenant_path = self.base_path / tenant_id
+            account_path = self.base_path / account_id
 
-            if not tenant_path.exists():
+            if not account_path.exists():
                 return 0
 
             total_size = 0
-            for root, _, files in os.walk(tenant_path):
+            for root, _, files in os.walk(account_path):
                 for name in files:
                     if not name.endswith(".metadata.json"):
                         file_path = Path(root) / name
@@ -579,7 +579,7 @@ class LocalBackend(StorageBackend):
     async def generate_presigned_url(
         self,
         remote_key: str,
-        tenant_id: str,
+        account_id: str,
         expires_seconds: int = 3600,
         method: str = "GET",
     ) -> str:
@@ -588,8 +588,8 @@ class LocalBackend(StorageBackend):
         Note: Local filesystem backends do not support presigned URLs.
 
         Args:
-            remote_key: Remote key WITHOUT tenant prefix
-            tenant_id: Tenant ID for automatic prefixing
+            remote_key: Remote key WITHOUT account prefix
+            account_id: Account ID for automatic prefixing
             expires_seconds: URL expiration time in seconds
             method: HTTP method
 

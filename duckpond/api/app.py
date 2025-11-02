@@ -15,7 +15,7 @@ from duckpond.api.middleware import (
     CORSHeadersMiddleware,
     LoggingMiddleware,
     RequestIDMiddleware,
-    TenantContextMiddleware,
+    AccountContextMiddleware,
 )
 from duckpond.api.routers import datasets_router, health_router, upload_router
 from duckpond.api.routers.query import router as query_router
@@ -63,8 +63,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         storage_path = Path(settings.local_storage_path).expanduser()
         storage_path.mkdir(parents=True, exist_ok=True)
-        tenants_path = storage_path / "tenants"
-        tenants_path.mkdir(parents=True, exist_ok=True)
+        accounts_path = storage_path / "accounts"
+        accounts_path.mkdir(parents=True, exist_ok=True)
 
         logger.info(
             "storage_initialized",
@@ -99,7 +99,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="DuckPond API",
-        description="Multi-tenant data platform with DuckDB and DuckLake",
+        description="Multi-account data platform with DuckDB and DuckLake",
         version="0.1.0",
         lifespan=lifespan,
         docs_url="/docs",
@@ -110,7 +110,7 @@ def create_app() -> FastAPI:
     app.add_middleware(CORSHeadersMiddleware)
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(RequestIDMiddleware)
-    app.add_middleware(TenantContextMiddleware)
+    app.add_middleware(AccountContextMiddleware)
 
     register_exception_handlers(app)
 
