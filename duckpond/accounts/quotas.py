@@ -10,7 +10,7 @@ This module provides quota enforcement mechanisms for:
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator
 
 import duckdb
 

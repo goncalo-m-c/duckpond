@@ -9,7 +9,6 @@ import structlog
 
 from duckpond.config import Settings
 from duckpond.notebooks.exceptions import (
-    NotebookNotFoundException,
     PortExhaustedException,
     SessionLimitException,
     SessionNotFoundException,

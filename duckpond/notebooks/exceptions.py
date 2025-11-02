@@ -62,9 +62,7 @@ class SessionLimitException(NotebookException):
         """Initialize exception with current and maximum session counts."""
         self.current = current
         self.maximum = maximum
-        super().__init__(
-            f"Maximum concurrent sessions reached: {current}/{maximum}"
-        )
+        super().__init__(f"Maximum concurrent sessions reached: {current}/{maximum}")
 
 
 class NotebookNotFoundException(NotebookException):

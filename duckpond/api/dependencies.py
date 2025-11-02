@@ -7,7 +7,7 @@ This module provides dependency injection for:
 - Catalog manager access
 """
 
-from typing import Annotated, AsyncGenerator
+from typing import Annotated
 
 from fastapi import Cookie, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession

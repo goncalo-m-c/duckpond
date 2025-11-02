@@ -1,7 +1,6 @@
 """Marimo process management with Docker isolation."""
 
 import asyncio
-import json
 from pathlib import Path
 from typing import Optional
 
@@ -9,7 +8,6 @@ import httpx
 import structlog
 
 from duckpond.notebooks.exceptions import (
-    ProcessHealthException,
     ProcessStartupException,
 )
 

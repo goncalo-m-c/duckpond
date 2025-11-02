@@ -6,13 +6,10 @@ from typing import Annotated
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, status
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from duckpond.api.dependencies import (
     CurrentTenant,
-    DatabaseSession,
     get_settings_dependency,
-    get_current_tenant,
 )
 from duckpond.config import Settings
 from duckpond.notebooks import (
@@ -358,7 +355,6 @@ async def marimo_websocket_proxy(
         return
 
     # Authenticate using multi-source helper with manual session management
-    from duckpond.api.dependencies import get_db_session
 
     manager = websocket.app.state.notebook_manager
 
@@ -375,7 +371,6 @@ async def marimo_websocket_proxy(
 
         # Proxy to marimo's WebSocket
         import websockets
-        from websockets.exceptions import ConnectionClosed
 
         marimo_ws_url = f"ws://127.0.0.1:{session.port}/ws"
 

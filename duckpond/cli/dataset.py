@@ -84,8 +84,10 @@ def list(
                                 file_path, account
                             )
                             storage_datasets[dataset_name]["total_size"] += file_size
-                        except:
-                            pass
+                        except Exception:
+                            logger.error(
+                                f"Cant get file size for {tenant} - {file_path}"
+                            )
 
             all_datasets = {}
 
