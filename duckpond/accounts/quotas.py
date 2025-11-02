@@ -10,7 +10,7 @@ This module provides quota enforcement mechanisms for:
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator
 
 import duckdb
 
@@ -128,9 +128,7 @@ class AccountQueryLimiter:
 
         try:
             async with self._lock:
-                self._active_queries[account_id] = (
-                    self._active_queries.get(account_id, 0) + 1
-                )
+                self._active_queries[account_id] = self._active_queries.get(account_id, 0) + 1
 
             yield
 
@@ -181,9 +179,7 @@ async def check_storage_quota(
         )
 
 
-async def calculate_storage_usage(
-    account_id: str, storage_backend: StorageBackend
-) -> int:
+async def calculate_storage_usage(account_id: str, storage_backend: StorageBackend) -> int:
     """
     Calculate current storage usage for a account in bytes.
 
@@ -197,9 +193,7 @@ async def calculate_storage_usage(
     return await storage_backend.get_storage_usage(account_id)
 
 
-def create_account_connection(
-    account: Account, database_path: Optional[str] = None
-) -> duckdb.DuckDBPyConnection:
+def create_account_connection(account: Account) -> duckdb.DuckDBPyConnection:
     """
     Create a DuckDB connection with account-specific memory limits.
 
@@ -220,7 +214,7 @@ def create_account_connection(
         result = conn.execute("SELECT * FROM my_table").fetchall()
         conn.close()
     """
-    conn = duckdb.connect(database_path or ":memory:")
+    conn = duckdb.connect(":memory:")
 
     memory_limit_gb = account.max_query_memory_gb
     conn.execute(f"SET memory_limit='{memory_limit_gb}GB'")

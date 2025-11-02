@@ -16,10 +16,8 @@ from duckpond.api.dependencies import CurrentAccount
 from duckpond.api.exceptions import ConflictException, NotFoundException
 from duckpond.catalog.manager import create_catalog_manager
 from duckpond.catalog.schemas import (
-    CreateDatasetRequest,
     DatasetListResponse,
     DatasetMetadata,
-    UpdateDatasetRequest,
 )
 from duckpond.exceptions import DatasetNotFoundError
 

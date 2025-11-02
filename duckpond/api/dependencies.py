@@ -7,9 +7,9 @@ This module provides dependency injection for:
 - Catalog manager access
 """
 
-from typing import Annotated, AsyncGenerator
+from typing import Annotated
 
-from fastapi import Depends, Header
+from fastapi import Cookie, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from duckpond.api.exceptions import ForbiddenException, UnauthorizedException
@@ -21,14 +21,21 @@ from duckpond.accounts.auth import get_authenticator
 async def get_api_key(
     x_api_key: Annotated[str | None, Header()] = None,
     authorization: Annotated[str | None, Header()] = None,
+    api_key: Annotated[str | None, Query()] = None,
+    x_api_key_query: Annotated[str | None, Query(alias="X-API-KEY")] = None,
+    notebook_api_key: Annotated[str | None, Cookie()] = None,
 ) -> str:
-    """Extract API key from headers.
+    """Extract API key from headers, query parameters, or cookies.
 
-    Supports both X-API-Key header and Authorization: Bearer token.
+    Supports X-API-Key header, Authorization: Bearer token, api_key/X-API-KEY query parameters,
+    and notebook_api_key cookie.
 
     Args:
         x_api_key: API key from X-API-Key header
         authorization: Bearer token from Authorization header
+        api_key: API key from query parameter
+        x_api_key_query: API key from X-API-KEY query parameter
+        notebook_api_key: API key from notebook_api_key cookie
 
     Returns:
         API key string
@@ -41,16 +48,16 @@ async def get_api_key(
         async def protected(api_key: str = Depends(get_api_key)):
             return {"api_key": api_key[:8] + "..."}
     """
-    api_key = x_api_key
-
-    if not api_key and authorization:
+    # Priority: header > query > cookie
+    key = x_api_key or api_key or x_api_key_query or notebook_api_key
+    if not key and authorization:
         if authorization.startswith("Bearer "):
-            api_key = authorization[7:]
+            key = authorization[7:]
 
-    if not api_key:
+    if not key:
         raise UnauthorizedException("API key required")
 
-    return api_key
+    return key
 
 
 async def get_current_account(

@@ -27,6 +27,10 @@ dependencies = [
     "python-slugify>=8.0.0",
     "pyyaml>=6.0.3",
     "grpcio-tools>=1.76.0",
+    "marimo[sql]>=0.9.0",
+    "httpx>=0.28.0",
+    "websockets>=12.0",
+    "polars[pyarrow]>=1.35.1",
 ]
 
 [dependency-groups]
