@@ -28,7 +28,7 @@ class NotebookSession:
 
     Attributes:
         session_id: Unique session identifier
-        tenant_id: Tenant owning this session
+        account_id: Tenant owning this session
         notebook_path: Absolute path to notebook file
         process: MarimoProcess wrapper managing the container
         port: Port marimo is listening on
@@ -40,7 +40,7 @@ class NotebookSession:
     """
 
     session_id: str
-    tenant_id: str
+    account_id: str
     notebook_path: Path
     process: "MarimoProcess"
     port: int
@@ -107,7 +107,7 @@ class NotebookSession:
         """
         return {
             "session_id": self.session_id,
-            "tenant_id": self.tenant_id,
+            "account_id": self.account_id,
             "notebook_path": str(self.notebook_path),
             "port": self.port,
             "status": self.status.value,

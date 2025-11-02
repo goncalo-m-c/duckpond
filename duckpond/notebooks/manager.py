@@ -92,14 +92,14 @@ class NotebookManager:
 
     async def create_session(
         self,
-        tenant_id: str,
+        account_id: str,
         notebook_path: str | Path,
     ) -> NotebookSession:
         """
         Create a new notebook session.
 
         Args:
-            tenant_id: Tenant identifier
+            account_id: Tenant identifier
             notebook_path: Path to notebook file (relative to tenant notebook dir)
 
         Returns:
@@ -118,11 +118,9 @@ class NotebookManager:
             )
 
         tenant_notebook_dir = get_tenant_notebook_directory(
-            tenant_id, self.settings.local_storage_path
+            account_id, self.settings.local_storage_path
         )
-        tenant_data_dir = get_tenant_data_directory(
-            tenant_id, self.settings.local_storage_path
-        )
+        tenant_data_dir = get_tenant_data_directory(account_id, self.settings.local_storage_path)
 
         validated_path = validate_notebook_path(notebook_path, tenant_notebook_dir)
 
@@ -132,7 +130,7 @@ class NotebookManager:
 
             logger.info(
                 "creating_missing_notebook",
-                tenant_id=tenant_id,
+                account_id=account_id,
                 notebook=str(validated_path),
             )
 
@@ -152,7 +150,7 @@ class NotebookManager:
         logger.info(
             "creating_notebook_session",
             session_id=session_id,
-            tenant_id=tenant_id,
+            account_id=account_id,
             notebook=str(validated_path),
             port=port,
         )
@@ -162,7 +160,7 @@ class NotebookManager:
                 notebook_path=validated_path,
                 port=port,
                 tenant_data_dir=tenant_data_dir,
-                tenant_id=tenant_id,
+                account_id=account_id,
                 docker_image=self.settings.notebook_docker_image,
                 memory_limit_mb=self.settings.notebook_max_memory_mb,
                 cpu_limit=self.settings.notebook_cpu_limit,
@@ -173,7 +171,7 @@ class NotebookManager:
 
             session = NotebookSession(
                 session_id=session_id,
-                tenant_id=tenant_id,
+                account_id=account_id,
                 notebook_path=validated_path,
                 process=marimo_process,  # Store the MarimoProcess wrapper
                 port=port,
@@ -185,7 +183,7 @@ class NotebookManager:
             logger.info(
                 "notebook_session_created",
                 session_id=session_id,
-                tenant_id=tenant_id,
+                account_id=account_id,
                 port=port,
                 container_id=container_id[:12],
             )
@@ -197,7 +195,7 @@ class NotebookManager:
             logger.error(
                 "notebook_session_creation_failed",
                 session_id=session_id,
-                tenant_id=tenant_id,
+                account_id=account_id,
                 error=str(e),
                 exc_info=True,
             )
@@ -223,20 +221,18 @@ class NotebookManager:
         session.update_last_accessed()
         return session
 
-    async def list_sessions(
-        self, tenant_id: Optional[str] = None
-    ) -> list[NotebookSession]:
+    async def list_sessions(self, account_id: Optional[str] = None) -> list[NotebookSession]:
         """
         List all sessions, optionally filtered by tenant.
 
         Args:
-            tenant_id: Optional tenant filter
+            account_id: Optional tenant filter
 
         Returns:
             List of notebook sessions
         """
-        if tenant_id:
-            return [s for s in self.sessions.values() if s.tenant_id == tenant_id]
+        if account_id:
+            return [s for s in self.sessions.values() if s.account_id == account_id]
         return list(self.sessions.values())
 
     async def terminate_session(self, session_id: str) -> None:
@@ -256,7 +252,7 @@ class NotebookManager:
         logger.info(
             "terminating_notebook_session",
             session_id=session_id,
-            tenant_id=session.tenant_id,
+            account_id=session.account_id,
             port=session.port,
         )
 
@@ -272,7 +268,7 @@ class NotebookManager:
         logger.info(
             "notebook_session_terminated",
             session_id=session_id,
-            tenant_id=session.tenant_id,
+            account_id=session.account_id,
         )
 
     def _allocate_port(self) -> int:
@@ -319,7 +315,7 @@ class NotebookManager:
                     logger.info(
                         "cleaning_up_idle_session",
                         session_id=session_id,
-                        tenant_id=session.tenant_id,
+                        account_id=session.account_id,
                         idle_seconds=int(
                             (session.last_accessed - session.created_at).total_seconds()
                         ),
@@ -341,9 +337,7 @@ class NotebookManager:
 
         while True:
             try:
-                await asyncio.sleep(
-                    self.settings.notebook_health_check_interval_seconds
-                )
+                await asyncio.sleep(self.settings.notebook_health_check_interval_seconds)
 
                 unhealthy_sessions = []
 
@@ -352,7 +346,7 @@ class NotebookManager:
                         logger.warning(
                             "session_process_dead",
                             session_id=session_id,
-                            tenant_id=session.tenant_id,
+                            account_id=session.account_id,
                         )
                         session.status = SessionStatus.CRASHED
                         unhealthy_sessions.append(session_id)
@@ -368,7 +362,7 @@ class NotebookManager:
                         logger.warning(
                             "session_health_check_failed",
                             session_id=session_id,
-                            tenant_id=session.tenant_id,
+                            account_id=session.account_id,
                             failed_count=failed_count,
                         )
 
@@ -376,7 +370,7 @@ class NotebookManager:
                             logger.error(
                                 "session_unhealthy",
                                 session_id=session_id,
-                                tenant_id=session.tenant_id,
+                                account_id=session.account_id,
                             )
                             session.status = SessionStatus.UNHEALTHY
                             unhealthy_sessions.append(session_id)
@@ -406,9 +400,7 @@ class NotebookManager:
             "max_sessions": self.settings.notebook_max_concurrent_sessions,
             "available_ports": len(self.available_ports),
             "sessions_by_status": {
-                status.value: len(
-                    [s for s in self.sessions.values() if s.status == status]
-                )
+                status.value: len([s for s in self.sessions.values() if s.status == status])
                 for status in SessionStatus
             },
         }

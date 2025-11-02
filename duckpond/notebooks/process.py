@@ -30,7 +30,7 @@ class MarimoProcess:
         notebook_path: Path,
         port: int,
         tenant_data_dir: Path,
-        tenant_id: str,
+        account_id: str,
         docker_image: str = "python:3.12-slim",
         memory_limit_mb: int = 2048,
         cpu_limit: float = 2.0,
@@ -43,7 +43,7 @@ class MarimoProcess:
             notebook_path: Absolute path to notebook file
             port: Port for marimo to listen on
             tenant_data_dir: Working directory for marimo process
-            tenant_id: Tenant identifier for container naming
+            account_id: Tenant identifier for container naming
             docker_image: Docker image to use
             memory_limit_mb: Memory limit in megabytes
             cpu_limit: CPU limit (1.0 = 1 core)
@@ -52,7 +52,7 @@ class MarimoProcess:
         self.notebook_path = notebook_path
         self.port = port
         self.tenant_data_dir = tenant_data_dir
-        self.tenant_id = tenant_id
+        self.account_id = account_id
         self.docker_image = docker_image
         self.memory_limit_mb = memory_limit_mb
         self.cpu_limit = cpu_limit
@@ -73,7 +73,7 @@ class MarimoProcess:
         import os
 
         # Generate container name
-        container_name = f"marimo-{self.tenant_id}-{self.port}"
+        container_name = f"marimo-{self.account_id}-{self.port}"
 
         # Relative path within container
         notebook_rel_path = self.notebook_path.relative_to(self.tenant_data_dir)
@@ -101,17 +101,11 @@ class MarimoProcess:
 
         # Add S3 credentials if available
         if "AWS_ACCESS_KEY_ID" in os.environ:
-            command.extend(
-                ["-e", f"AWS_ACCESS_KEY_ID={os.environ['AWS_ACCESS_KEY_ID']}"]
-            )
+            command.extend(["-e", f"AWS_ACCESS_KEY_ID={os.environ['AWS_ACCESS_KEY_ID']}"])
         if "AWS_SECRET_ACCESS_KEY" in os.environ:
-            command.extend(
-                ["-e", f"AWS_SECRET_ACCESS_KEY={os.environ['AWS_SECRET_ACCESS_KEY']}"]
-            )
+            command.extend(["-e", f"AWS_SECRET_ACCESS_KEY={os.environ['AWS_SECRET_ACCESS_KEY']}"])
         if "AWS_SESSION_TOKEN" in os.environ:
-            command.extend(
-                ["-e", f"AWS_SESSION_TOKEN={os.environ['AWS_SESSION_TOKEN']}"]
-            )
+            command.extend(["-e", f"AWS_SESSION_TOKEN={os.environ['AWS_SESSION_TOKEN']}"])
         if "AWS_REGION" in os.environ:
             command.extend(["-e", f"AWS_REGION={os.environ['AWS_REGION']}"])
 
@@ -209,18 +203,14 @@ class MarimoProcess:
                 is_running = await self._check_container_running()
                 if not is_running:
                     logs = await self._read_container_logs()
-                    raise ProcessStartupException(
-                        f"Container stopped unexpectedly. Logs: {logs}"
-                    )
+                    raise ProcessStartupException(f"Container stopped unexpectedly. Logs: {logs}")
 
                 try:
                     response = await client.get(health_url, timeout=2.0)
                     if response.status_code == 200:
                         logger.debug(
                             "health_check_passed",
-                            container_id=self.container_id[:12]
-                            if self.container_id
-                            else None,
+                            container_id=self.container_id[:12] if self.container_id else None,
                             port=self.port,
                             elapsed=f"{elapsed:.2f}s",
                         )
@@ -294,9 +284,7 @@ class MarimoProcess:
         """Clean up resources after failed startup."""
         if self.container_id:
             try:
-                await asyncio.create_subprocess_exec(
-                    "docker", "stop", "-t", "5", self.container_id
-                )
+                await asyncio.create_subprocess_exec("docker", "stop", "-t", "5", self.container_id)
             except Exception as e:
                 logger.warning("cleanup_failed_start_error", error=str(e))
 
