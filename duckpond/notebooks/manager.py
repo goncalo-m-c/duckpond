@@ -15,8 +15,8 @@ from duckpond.notebooks.exceptions import (
 )
 from duckpond.notebooks.process import MarimoProcess
 from duckpond.notebooks.security import (
-    get_tenant_data_directory,
-    get_tenant_notebook_directory,
+    get_account_data_directory,
+    get_account_notebook_directory,
     validate_notebook_path,
 )
 from duckpond.notebooks.session import NotebookSession, SessionStatus
@@ -117,12 +117,12 @@ class NotebookManager:
                 self.settings.notebook_max_concurrent_sessions,
             )
 
-        tenant_notebook_dir = get_tenant_notebook_directory(
+        account_notebook_dir = get_account_notebook_directory(
             account_id, self.settings.local_storage_path
         )
-        tenant_data_dir = get_tenant_data_directory(account_id, self.settings.local_storage_path)
+        account_data_dir = get_account_data_directory(account_id, self.settings.local_storage_path)
 
-        validated_path = validate_notebook_path(notebook_path, tenant_notebook_dir)
+        validated_path = validate_notebook_path(notebook_path, account_notebook_dir)
 
         # Create notebook if it doesn't exist
         if not validated_path.exists():
@@ -135,12 +135,12 @@ class NotebookManager:
             )
 
             # Ensure notebook directory exists
-            tenant_notebook_dir.mkdir(parents=True, exist_ok=True)
+            account_notebook_dir.mkdir(parents=True, exist_ok=True)
 
             # Create notebook with default template
             await create_notebook(
                 filename=validated_path.name,
-                tenant_notebook_dir=tenant_notebook_dir,
+                account_notebook_dir=account_notebook_dir,
             )
 
         port = self._allocate_port()
@@ -159,7 +159,7 @@ class NotebookManager:
             marimo_process = MarimoProcess(
                 notebook_path=validated_path,
                 port=port,
-                tenant_data_dir=tenant_data_dir,
+                account_data_dir=account_data_dir,
                 account_id=account_id,
                 docker_image=self.settings.notebook_docker_image,
                 memory_limit_mb=self.settings.notebook_max_memory_mb,
@@ -245,7 +245,9 @@ class NotebookManager:
         Raises:
             SessionNotFoundException: If session doesn't exist
         """
-        session = self.sessions.get(session_id)
+        # Use pop() to atomically remove and get the session, preventing race conditions
+        # between cleanup loop, health check loop, and manual termination
+        session = self.sessions.pop(session_id, None)
         if not session:
             raise SessionNotFoundException(session_id)
 
@@ -262,8 +264,6 @@ class NotebookManager:
         await session.process.stop()
 
         self._release_port(session.port)
-
-        del self.sessions[session_id]
 
         logger.info(
             "notebook_session_terminated",
@@ -320,7 +320,15 @@ class NotebookManager:
                             (session.last_accessed - session.created_at).total_seconds()
                         ),
                     )
-                    await self.terminate_session(session_id)
+                    try:
+                        await self.terminate_session(session_id)
+                    except SessionNotFoundException:
+                        # Session was already terminated (race condition with health check or manual stop)
+                        logger.debug(
+                            "session_already_terminated",
+                            session_id=session_id,
+                            context="cleanup_loop",
+                        )
 
             except asyncio.CancelledError:
                 break
@@ -376,7 +384,15 @@ class NotebookManager:
                             unhealthy_sessions.append(session_id)
 
                 for session_id in unhealthy_sessions:
-                    await self.terminate_session(session_id)
+                    try:
+                        await self.terminate_session(session_id)
+                    except SessionNotFoundException:
+                        # Session was already terminated (race condition with cleanup loop or manual stop)
+                        logger.debug(
+                            "session_already_terminated",
+                            session_id=session_id,
+                            context="health_check_loop",
+                        )
 
             except asyncio.CancelledError:
                 break

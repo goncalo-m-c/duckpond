@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckPond UI Components - Demo</title>
+    <link rel="stylesheet" href="/static/css/main.css?v=8" />
+    <link rel="stylesheet" href="/static/css/components.css?v=1" />
+    <style>
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .demo-section {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
+        }
+
+        .demo-section h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: var(--space-md);
+            padding-bottom: var(--space-md);
+            border-bottom: 2px solid var(--primary-yellow);
+        }
+
+        .demo-section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-md);
+            color: var(--text-light);
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+
+        .demo-item {
+            padding: var(--space-lg);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+
+        .demo-item p {
+            margin-top: var(--space-md);
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .demo-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: var(--space-2xl);
+        }
+
+        .page-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+        }
+
+        .page-header .subtitle {
+            font-size: 18px;
+            color: var(--text-light);
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .progress-demo {
+            max-width: 600px;
+            margin: var(--space-xl) auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="page-header">
+            <h1>🦆 DuckPond UI Components</h1>
+            <p class="subtitle">Interactive demonstration of all UI components from Phase 8</p>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="demo-section">
+            <h2>Toast Notifications</h2>
+            <p>Non-intrusive feedback messages that auto-dismiss</p>
+
+            <div class="demo-controls">
+                <button class="btn-primary" onclick="toast.success('Operation completed successfully!')">
+                    Success Toast
+                </button>
+                <button class="btn-primary" onclick="toast.error('Something went wrong!', 5000)">
+                    Error Toast
+                </button>
+                <button class="btn-primary" onclick="toast.warning('Please review your changes')">
+                    Warning Toast
+                </button>
+                <button class="btn-primary" onclick="toast.info('Processing your request...')">
+                    Info Toast
+                </button>
+            </div>
+
+            <p><small>Usage: <code>toast.success("Message")</code></small></p>
+        </div>
+
+        <!-- Loading States -->
+        <div class="demo-section">
+            <h2>Loading Spinners</h2>
+
+            <h3>Spinner Sizes</h3>
+            <div class="demo-grid">
+                <div class="demo-item">
+                    <div class="loading-spinner loading-spinner-small"></div>
+                    <p>Small</p>
+                </div>
+                <div class="demo-item">
+                    <div class="loading-spinner loading-spinner-medium"></div>
+                    <p>Medium</p>
+                </div>
+                <div class="demo-item">
+                    <div class="loading-spinner loading-spinner-large"></div>
+                    <p>Large</p>
+                </div>
+            </div>
+
+            <h3>Button Loading State</h3>
+            <div class="demo-controls">
+                <button class="btn-primary" id="demo-btn-loading">
+                    Click to Show Loading
+                </button>
+                <button class="btn-secondary" onclick="showFullScreenLoading()">
+                    Full Screen Loading
+                </button>
+            </div>
+
+            <h3>Skeleton Loaders</h3>
+            <div class="demo-grid">
+                <div class="demo-item">
+                    <div class="skeleton skeleton-text" style="width: 100%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 80%;"></div>
+                    <p>Text Skeleton</p>
+                </div>
+                <div class="demo-item">
+                    <div class="skeleton skeleton-title" style="width: 100%;"></div>
+                    <p>Title Skeleton</p>
+                </div>
+                <div class="demo-item">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <p>Avatar Skeleton</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="demo-section">
+            <h2>Progress Indicator</h2>
+            <p>Multi-step progress for long operations</p>
+
+            <div class="progress-demo" id="progress-container"></div>
+
+            <div class="demo-controls">
+                <button class="btn-primary" onclick="demoProgress()">
+                    Start Progress Demo
+                </button>
+                <button class="btn-secondary" onclick="resetProgress()">
+                    Reset
+                </button>
+            </div>
+
+            <p><small>Usage: <code>const progress = new ProgressIndicator(['Step 1', 'Step 2'])</code></small></p>
+        </div>
+
+        <!-- Modal Dialogs -->
+        <div class="demo-section">
+            <h2>Modal Dialogs</h2>
+            <p>Confirmation dialogs with consistent styling</p>
+
+            <div class="demo-controls">
+                <button class="btn-primary" onclick="showInfoModal()">
+                    Info Modal
+                </button>
+                <button class="btn-primary" onclick="showWarningModal()">
+                    Warning Modal
+                </button>
+                <button class="btn-primary" onclick="showDangerModal()">
+                    Danger Modal
+                </button>
+                <button class="btn-secondary" onclick="showAlertModal()">
+                    Alert Dialog
+                </button>
+            </div>
+
+            <p><small>Usage: <code>Modal.confirm({ title: "Title", message: "Message", onConfirm: () => {} })</code></small></p>
+        </div>
+
+        <!-- Empty States -->
+        <div class="demo-section">
+            <h2>Empty States</h2>
+            <p>Friendly messages when no data is available</p>
+
+            <div id="empty-state-demo" style="min-height: 300px;"></div>
+
+            <div class="demo-controls">
+                <button class="btn-primary" onclick="showEmptyState('no-data')">
+                    No Data
+                </button>
+                <button class="btn-primary" onclick="showEmptyState('search')">
+                    No Search Results
+                </button>
+                <button class="btn-secondary" onclick="clearEmptyState()">
+                    Clear
+                </button>
+            </div>
+
+            <p><small>Usage: <code>EmptyState.create({ icon: "📓", title: "No items", message: "..." })</code></small></p>
+        </div>
+
+        <!-- Error Display -->
+        <div class="demo-section">
+            <h2>Error Display</h2>
+            <p>User-friendly error messages with retry options</p>
+
+            <div id="error-demo" style="min-height: 300px;"></div>
+
+            <div class="demo-controls">
+                <button class="btn-primary" onclick="showErrorDisplay()">
+                    Show Error
+                </button>
+                <button class="btn-primary" onclick="showInlineError()">
+                    Inline Error
+                </button>
+                <button class="btn-secondary" onclick="clearError()">
+                    Clear
+                </button>
+            </div>
+
+            <p><small>Usage: <code>ErrorDisplay.create(error, { title: "Error", onRetry: () => {} })</code></small></p>
+        </div>
+
+        <!-- Combined Demo -->
+        <div class="demo-section">
+            <h2>Combined Demo: Create Notebook Flow</h2>
+            <p>Demonstrates multiple components working together</p>
+
+            <div class="demo-controls">
+                <button class="btn-primary" onclick="demoCreateFlow()">
+                    Simulate Create Notebook
+                </button>
+                <button class="btn-primary" onclick="demoCreateFlowError()">
+                    Simulate Create Error
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/components.js?v=1"></script>
+    <script>
+        // Button Loading State Demo
+        document.getElementById('demo-btn-loading')?.addEventListener('click', function() {
+            ButtonLoadingState.show(this, 'Loading...');
+            setTimeout(() => {
+                ButtonLoadingState.hide(this);
+                toast.success('Loading complete!');
+            }, 2000);
+        });
+
+        // Full Screen Loading
+        function showFullScreenLoading() {
+            const overlay = LoadingSpinner.createFullScreen('Processing your request...');
+            document.body.appendChild(overlay);
+            setTimeout(() => {
+                document.body.removeChild(overlay);
+                toast.success('Process complete!');
+            }, 2000);
+        }
+
+        // Progress Indicator Demo
+        let currentProgress = null;
+
+        function demoProgress() {
+            resetProgress();
+
+            const steps = [
+                "Creating session...",
+                "Starting container...",
+                "Waiting for marimo...",
+                "Ready!"
+            ];
+
+            currentProgress = new ProgressIndicator(steps);
+            const element = currentProgress.create();
+            document.getElementById('progress-container').appendChild(element);
+
+            // Simulate progress
+            let step = 0;
+            currentProgress.setStep(0);
+
+            const interval = setInterval(() => {
+                step++;
+                if (step < steps.length) {
+                    currentProgress.setStep(step);
+                } else {
+                    clearInterval(interval);
+                    currentProgress.complete();
+                    toast.success('Process completed!');
+                }
+            }, 1500);
+        }
+
+        function resetProgress() {
+            document.getElementById('progress-container').innerHTML = '';
+            currentProgress = null;
+        }
+
+        // Modal Demos
+        function showInfoModal() {
+            Modal.confirm({
+                title: "Information",
+                message: "This is an informational modal. You can provide important details to users here.",
+                type: "info",
+                confirmText: "Got it",
+                showCancel: false
+            });
+        }
+
+        function showWarningModal() {
+            Modal.confirm({
+                title: "Warning",
+                message: "This action may have consequences. Are you sure you want to proceed?",
+                type: "warning",
+                confirmText: "Proceed",
+                cancelText: "Cancel",
+                onConfirm: () => {
+                    toast.success('Action confirmed!');
+                },
+                onCancel: () => {
+                    toast.info('Action cancelled');
+                }
+            });
+        }
+
+        function showDangerModal() {
+            Modal.confirm({
+                title: "Delete Resource?",
+                message: "This action cannot be undone. The resource will be permanently deleted.",
+                type: "danger",
+                confirmText: "Delete",
+                cancelText: "Cancel",
+                onConfirm: () => {
+                    toast.success('Resource deleted');
+                },
+                onCancel: () => {
+                    toast.info('Deletion cancelled');
+                }
+            });
+        }
+
+        function showAlertModal() {
+            Modal.alert("Success", "Your changes have been saved successfully.", "info");
+        }
+
+        // Empty State Demo
+        function showEmptyState(type) {
+            const container = document.getElementById('empty-state-demo');
+            container.innerHTML = '';
+
+            let emptyState;
+            if (type === 'no-data') {
+                emptyState = EmptyState.create({
+                    icon: "📓",
+                    title: "No notebooks yet",
+                    message: "Create your first notebook to get started with interactive data analysis.",
+                    actionText: "Create Notebook",
+                    actionLink: "#"
+                });
+            } else {
+                emptyState = EmptyState.create({
+                    icon: "🔍",
+                    title: "No results found",
+                    message: "No notebooks match your search. Try a different search term.",
+                });
+            }
+
+            container.appendChild(emptyState);
+
+            // Handle action button click
+            const actionBtn = container.querySelector('.empty-state-action');
+            if (actionBtn) {
+                actionBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    toast.info('Create notebook clicked!');
+                });
+            }
+        }
+
+        function clearEmptyState() {
+            document.getElementById('empty-state-demo').innerHTML = '';
+        }
+
+        // Error Display Demo
+        function showErrorDisplay() {
+            const container = document.getElementById('error-demo');
+            container.innerHTML = '';
+
+            const error = new Error('Failed to connect to the server. Please check your internet connection.');
+            const errorDisplay = ErrorDisplay.create(error, {
+                title: "Connection Failed",
+                showRetry: true,
+                onRetry: () => {
+                    toast.info('Retrying...');
+                    setTimeout(() => {
+                        clearError();
+                        toast.success('Connection restored!');
+                    }, 1000);
+                }
+            });
+
+            container.appendChild(errorDisplay);
+        }
+
+        function showInlineError() {
+            const container = document.getElementById('error-demo');
+            container.innerHTML = '<div style="padding: 40px; text-align: center;"></div>';
+
+            const inlineError = ErrorDisplay.createInline('This field is required');
+            container.firstChild.appendChild(inlineError);
+        }
+
+        function clearError() {
+            document.getElementById('error-demo').innerHTML = '';
+        }
+
+        // Combined Demo: Create Notebook Flow
+        function demoCreateFlow() {
+            // Show progress
+            toast.info('Creating notebook...');
+
+            // Simulate API call with delay
+            setTimeout(() => {
+                toast.success('Notebook "analysis.py" created successfully!');
+
+                // Show follow-up action
+                setTimeout(() => {
+                    Modal.confirm({
+                        title: "Notebook Created",
+                        message: "Would you like to start the notebook now?",
+                        type: "info",
+                        confirmText: "Start Now",
+                        cancelText: "Later",
+                        onConfirm: () => {
+                            toast.info('Starting notebook...');
+                            setTimeout(() => {
+                                toast.success('Notebook is now running!');
+                            }, 1500);
+                        }
+                    });
+                }, 500);
+            }, 1500);
+        }
+
+        function demoCreateFlowError() {
+            toast.info('Creating notebook...');
+
+            setTimeout(() => {
+                toast.error('Failed to create notebook: Invalid notebook name', 5000);
+            }, 1500);
+        }
+
+        // Show welcome toast on load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                toast.info('Welcome to the UI Components Demo! Click any button to see it in action.');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

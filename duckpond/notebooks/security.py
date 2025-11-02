@@ -9,9 +9,7 @@ from duckpond.notebooks.exceptions import PathSecurityException
 logger = structlog.get_logger(__name__)
 
 
-def validate_notebook_path(
-    notebook_path: str | Path, tenant_notebook_dir: Path
-) -> Path:
+def validate_notebook_path(notebook_path: str | Path, account_notebook_dir: Path) -> Path:
     """
     Validate notebook path for security.
 
@@ -22,7 +20,7 @@ def validate_notebook_path(
 
     Args:
         notebook_path: User-provided notebook path (relative or absolute)
-        tenant_notebook_dir: Absolute path to tenant's notebook directory
+        account_notebook_dir: Absolute path to tenant's notebook directory
 
     Returns:
         Validated absolute path within tenant directory
@@ -36,16 +34,16 @@ def validate_notebook_path(
         if notebook_path.is_absolute():
             resolved_path = notebook_path.resolve()
         else:
-            resolved_path = (tenant_notebook_dir / notebook_path).resolve()
+            resolved_path = (account_notebook_dir / notebook_path).resolve()
 
-        tenant_dir_resolved = tenant_notebook_dir.resolve()
+        account_dir_resolved = account_notebook_dir.resolve()
 
-        if not str(resolved_path).startswith(str(tenant_dir_resolved)):
+        if not str(resolved_path).startswith(str(account_dir_resolved)):
             logger.warning(
                 "path_traversal_attempt",
                 notebook_path=str(notebook_path),
                 resolved_path=str(resolved_path),
-                tenant_dir=str(tenant_dir_resolved),
+                account_dir=str(account_dir_resolved),
             )
             raise PathSecurityException(
                 str(notebook_path),
@@ -85,50 +83,50 @@ def validate_notebook_path(
         )
 
 
-def get_tenant_notebook_directory(tenant_id: str, storage_path: Path) -> Path:
+def get_account_notebook_directory(account_id: str, storage_path: Path) -> Path:
     """
     Get the notebook directory for a tenant.
 
     Creates the directory if it doesn't exist with secure permissions.
 
     Args:
-        tenant_id: Tenant identifier
+        account_id: Tenant identifier
         storage_path: Base storage path from configuration
 
     Returns:
         Absolute path to tenant's notebook directory
     """
-    tenant_dir = storage_path / "tenants" / tenant_id / "notebooks"
+    account_dir = storage_path / "accounts" / account_id / "notebooks"
 
-    tenant_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    account_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     logger.debug(
-        "tenant_notebook_directory",
-        tenant_id=tenant_id,
-        notebook_dir=str(tenant_dir),
+        "account_notebook_directory",
+        account_id=account_id,
+        notebook_dir=str(account_dir),
     )
 
-    return tenant_dir
+    return account_dir
 
 
-def get_tenant_data_directory(tenant_id: str, storage_path: Path) -> Path:
+def get_account_data_directory(account_id: str, storage_path: Path) -> Path:
     """
     Get the data directory for a tenant.
 
     This is used as the working directory for marimo processes.
 
     Args:
-        tenant_id: Tenant identifier
+        account_id: Tenant identifier
         storage_path: Base storage path from configuration
 
     Returns:
         Absolute path to tenant's data directory
     """
-    tenant_data_dir = storage_path / "tenants" / tenant_id
+    account_data_dir = storage_path / "accounts" / account_id
 
-    tenant_data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    account_data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
 
-    return tenant_data_dir
+    return account_data_dir
 
 
 def validate_filename(filename: str) -> None:

@@ -8,6 +8,7 @@ import bcrypt
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from duckpond.accounts.models import APIKey, Account
 
@@ -27,9 +28,9 @@ class CachedAuthResult:
             account: Account model instance
             api_key: APIKey model instance
         """
-        self.account = account
-        self.api_key = api_key
-        self.timestamp = time.time()
+        self.account_id: str = account.account_id
+        self.key_id: str = api_key.key_id
+        self.timestamp: float = time.time()
 
     def is_expired(self, ttl: int = CACHE_TTL) -> bool:
         """
@@ -46,7 +47,7 @@ class CachedAuthResult:
     def __repr__(self) -> str:
         """String representation."""
         return (
-            f"<CachedAuthResult account_id={self.account.account_id} "
+            f"<CachedAuthResult account_id={self.account_id} "
             f"age={time.time() - self.timestamp:.1f}s>"
         )
 
@@ -109,7 +110,7 @@ class APIKeyAuthenticator:
             # Cache hit - need to reload tenant and api_key from database
             logger.debug(
                 "api_key_cache_hit",
-                account_id=cached.account.account_id,
+                account_id=cached.account_id,
                 cache_age=time.time() - cached.timestamp,
             )
 
@@ -117,15 +118,16 @@ class APIKeyAuthenticator:
             result = await session.execute(
                 select(Account, APIKey)
                 .join(APIKey, Account.account_id == APIKey.account_id)
-                .where(Account.account_id == cached.account.account_id)
-                .where(APIKey.key_id == cached.api_key.key_id)
+                .options(selectinload(Account.api_keys))
+                .where(Account.account_id == cached.account_id)
+                .where(APIKey.key_id == cached.key_id)
             )
             row = result.first()
             if row:
                 return row.Account, row.APIKey
             else:
                 # Cached entry no longer valid, remove from cache
-                logger.warning("cached_entry_not_found_in_db", account_id=cached.account.account_id)
+                logger.warning("cached_entry_not_found_in_db", account_id=cached.account_id)
                 del self._cache[api_key]
 
         logger.debug("api_key_cache_miss", key_prefix=api_key[:8])
@@ -160,7 +162,11 @@ class APIKeyAuthenticator:
         """
         try:
             key_prefix = api_key[:8]
-            stmt = select(APIKey).where(APIKey.key_prefix == key_prefix)
+            stmt = (
+                select(APIKey)
+                .options(selectinload(APIKey.account).selectinload(Account.api_keys))
+                .where(APIKey.key_prefix == key_prefix)
+            )
             result = await session.execute(stmt)
             db_key = result.scalar_one_or_none()
 
@@ -178,7 +184,11 @@ class APIKeyAuthenticator:
 
             account = db_key.account
             if not account:
-                stmt = select(Account).where(Account.account_id == db_key.account_id)
+                stmt = (
+                    select(Account)
+                    .options(selectinload(Account.api_keys))
+                    .where(Account.account_id == db_key.account_id)
+                )
                 result = await session.execute(stmt)
                 account = result.scalar_one_or_none()
 
@@ -212,7 +222,7 @@ class APIKeyAuthenticator:
             return cached
 
         if cached:
-            logger.debug("cache_entry_expired", account_id=cached.account.account_id)
+            logger.debug("cache_entry_expired", account_id=cached.account_id)
             del self._cache[api_key]
 
         return None
@@ -230,7 +240,7 @@ class APIKeyAuthenticator:
             oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k].timestamp)
             logger.debug(
                 "cache_eviction",
-                evicted_account=self._cache[oldest_key].account.account_id,
+                evicted_account=self._cache[oldest_key].account_id,
             )
             del self._cache[oldest_key]
 
@@ -249,7 +259,7 @@ class APIKeyAuthenticator:
             api_key: API key to invalidate
         """
         if api_key in self._cache:
-            account_id = self._cache[api_key].account.account_id
+            account_id = self._cache[api_key].account_id
             del self._cache[api_key]
             logger.info("cache_invalidated", account_id=account_id)
 
@@ -263,7 +273,7 @@ class APIKeyAuthenticator:
             account_id: Account ID to invalidate
         """
         keys_to_remove = [
-            key for key, cached in self._cache.items() if cached.account.account_id == account_id
+            key for key, cached in self._cache.items() if cached.account_id == account_id
         ]
 
         for key in keys_to_remove:

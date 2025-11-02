@@ -29,7 +29,7 @@ class MarimoProcess:
         self,
         notebook_path: Path,
         port: int,
-        tenant_data_dir: Path,
+        account_data_dir: Path,
         account_id: str,
         docker_image: str = "python:3.12-slim",
         memory_limit_mb: int = 2048,
@@ -42,7 +42,7 @@ class MarimoProcess:
         Args:
             notebook_path: Absolute path to notebook file
             port: Port for marimo to listen on
-            tenant_data_dir: Working directory for marimo process
+            account_data_dir: Working directory for marimo process
             account_id: Tenant identifier for container naming
             docker_image: Docker image to use
             memory_limit_mb: Memory limit in megabytes
@@ -51,7 +51,7 @@ class MarimoProcess:
         """
         self.notebook_path = notebook_path
         self.port = port
-        self.tenant_data_dir = tenant_data_dir
+        self.account_data_dir = account_data_dir
         self.account_id = account_id
         self.docker_image = docker_image
         self.memory_limit_mb = memory_limit_mb
@@ -76,7 +76,7 @@ class MarimoProcess:
         container_name = f"marimo-{self.account_id}-{self.port}"
 
         # Relative path within container
-        notebook_rel_path = self.notebook_path.relative_to(self.tenant_data_dir)
+        notebook_rel_path = self.notebook_path.relative_to(self.account_data_dir)
 
         # Build docker run command
         command = [
@@ -93,7 +93,7 @@ class MarimoProcess:
             "--network=host",  # Use host network for simplicity
             # Volume mounts
             "-v",
-            f"{self.tenant_data_dir}:/workspace",
+            f"{self.account_data_dir}:/workspace",
             # Working directory
             "-w",
             "/workspace",

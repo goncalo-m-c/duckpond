@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Login - DuckPond</title>
+        <link rel="stylesheet" href="/static/css/login.css" />
+    </head>
+    <body>
+        <div class="login-container">
+            <div class="login-card">
+                <div class="logo-section">
+                    <h1 class="logo">🦆 DuckPond</h1>
+                    <p class="subtitle">Multi-Tenant Data Platform</p>
+                </div>
+
+                <form id="login-form" class="login-form">
+                    <div class="form-group">
+                        <label for="api-key">API Key</label>
+                        <input
+                            type="password"
+                            id="api-key"
+                            name="api-key"
+                            placeholder="Enter your API key"
+                            required
+                            autocomplete="off"
+                        />
+                        <span class="input-hint">Your API key is case-sensitive</span>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="remember-me" name="remember-me" />
+                            <span>Remember me</span>
+                        </label>
+                    </div>
+
+                    <div id="error-message" class="error-message hidden"></div>
+
+                    <button type="submit" class="submit-button" id="submit-button">
+                        <span class="button-text">Sign In</span>
+                        <span class="loading-spinner hidden"></span>
+                    </button>
+                </form>
+
+                <div class="footer-links">
+                    <p>
+                        Don't have an API key?
+                        <a href="/docs" target="_blank">Read the documentation</a>
+                    </p>
+                    <p>
+                        <a href="/">Back to home</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/js/auth.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const authManager = window.authManager;
+                const form = document.getElementById('login-form');
+                const apiKeyInput = document.getElementById('api-key');
+                const rememberMeCheckbox = document.getElementById('remember-me');
+                const submitButton = document.getElementById('submit-button');
+                const buttonText = submitButton.querySelector('.button-text');
+                const loadingSpinner = submitButton.querySelector('.loading-spinner');
+                const errorMessage = document.getElementById('error-message');
+
+                // Redirect if already authenticated
+                if (authManager.isAuthenticated()) {
+                    window.location.href = authManager.getReturnUrl();
+                    return;
+                }
+
+                function validateApiKey(key) {
+                    if (!key || key.trim().length === 0) {
+                        return { valid: false, message: 'API key is required' };
+                    }
+                    if (key.length < 10) {
+                        return { valid: false, message: 'API key is too short' };
+                    }
+                    return { valid: true };
+                }
+
+                function showError(message) {
+                    errorMessage.textContent = message;
+                    errorMessage.classList.remove('hidden');
+                }
+
+                function hideError() {
+                    errorMessage.classList.add('hidden');
+                }
+
+                function setLoading(isLoading) {
+                    if (isLoading) {
+                        submitButton.disabled = true;
+                        buttonText.classList.add('hidden');
+                        loadingSpinner.classList.remove('hidden');
+                    } else {
+                        submitButton.disabled = false;
+                        buttonText.classList.remove('hidden');
+                        loadingSpinner.classList.add('hidden');
+                    }
+                }
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    hideError();
+
+                    const apiKey = apiKeyInput.value.trim();
+                    const rememberMe = rememberMeCheckbox.checked;
+
+                    const validation = validateApiKey(apiKey);
+                    if (!validation.valid) {
+                        showError(validation.message);
+                        return;
+                    }
+
+                    setLoading(true);
+
+                    try {
+                        await authManager.login(apiKey, rememberMe);
+                        window.location.href = authManager.getReturnUrl();
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        showError(error.message || 'An error occurred during login. Please try again.');
+                        setLoading(false);
+                    }
+                });
+
+                apiKeyInput.addEventListener('input', () => {
+                    hideError();
+                });
+            });
+        </script>
+    </body>
+</html>

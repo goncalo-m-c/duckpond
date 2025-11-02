@@ -6,7 +6,9 @@ from typing import AsyncGenerator
 
 import structlog
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from duckpond.api.exceptions import (
     DuckPondAPIException,
@@ -18,10 +20,12 @@ from duckpond.api.middleware import (
     AccountContextMiddleware,
 )
 from duckpond.api.routers import (
+    accounts_router,
+    auth_router,
     datasets_router,
     health_router,
-    upload_router,
     notebooks_router,
+    upload_router,
 )
 from duckpond.api.routers.query import router as query_router
 from duckpond.api.routers.streaming import router as streaming_router
@@ -141,22 +145,35 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
 
+    app.include_router(auth_router)
     app.include_router(health_router)
     app.include_router(datasets_router)
     app.include_router(upload_router)
     app.include_router(query_router)
     app.include_router(streaming_router)
     app.include_router(notebooks_router)
+    app.include_router(accounts_router)
 
-    @app.get("/", tags=["info"])
-    async def root() -> dict[str, str]:
-        """Root endpoint with API information."""
-        return {
-            "name": "DuckPond API",
-            "version": "0.1.0",
-            "docs": "/docs",
-            "health": "/health",
-        }
+    # Mount static files
+    app.mount("/static", StaticFiles(directory="duckpond/static"), name="static")
+
+    # Templates for rendering HTML
+    templates = Jinja2Templates(directory="duckpond/templates")
+
+    @app.get("/", response_class=HTMLResponse, tags=["web"])
+    async def web_app(request: Request) -> HTMLResponse:
+        """Serve main SPA."""
+        return templates.TemplateResponse("app.html", {"request": request})
+
+    @app.get("/app/{full_path:path}", response_class=HTMLResponse, tags=["web"])
+    async def web_app_catchall(request: Request, full_path: str) -> HTMLResponse:
+        """Catch-all route for SPA client-side routing."""
+        return templates.TemplateResponse("app.html", {"request": request})
+
+    @app.get("/login", response_class=HTMLResponse, tags=["web"])
+    async def login_page(request: Request) -> HTMLResponse:
+        """Serve login page."""
+        return templates.TemplateResponse("login.html", {"request": request})
 
     logger.info("application_created", title=app.title, version=app.version)
     return app

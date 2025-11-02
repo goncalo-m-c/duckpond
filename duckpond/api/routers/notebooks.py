@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, statu
 from pydantic import BaseModel, Field
 
 from duckpond.api.dependencies import (
-    CurrentTenant,
+    CurrentAccount,
     get_settings_dependency,
 )
 from duckpond.config import Settings
@@ -18,7 +18,7 @@ from duckpond.notebooks import (
     PortExhaustedException,
     SessionLimitException,
     SessionNotFoundException,
-    get_tenant_notebook_directory,
+    get_account_notebook_directory,
     proxy_http_request,
     proxy_websocket,
 )
@@ -66,13 +66,13 @@ class SessionInfoResponse(BaseModel):
     """Notebook session information."""
 
     session_id: str
-    tenant_id: str
+    account_id: str
     notebook_path: str
     port: int
     status: str
     created_at: str
     last_accessed: str
-    pid: int | None
+    pid: str | None
     is_alive: bool
 
 
@@ -138,7 +138,7 @@ async def get_status(
 async def create_session(
     request: Request,
     create_request: CreateSessionRequest,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     settings: Annotated[Settings, Depends(get_settings_dependency)],
 ) -> CreateSessionResponse:
     """
@@ -162,7 +162,7 @@ async def create_session(
 
     try:
         session = await manager.create_session(
-            tenant_id=tenant_id,
+            account_id=account_id,
             notebook_path=create_request.notebook_path,
         )
 
@@ -203,7 +203,7 @@ async def create_session(
     except Exception as e:
         logger.error(
             "session_creation_error",
-            tenant_id=tenant_id,
+            account_id=account_id,
             error=str(e),
             exc_info=True,
         )
@@ -216,7 +216,7 @@ async def create_session(
 @router.get("/sessions", response_model=list[SessionInfoResponse])
 async def list_sessions(
     request: Request,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ) -> list[SessionInfoResponse]:
     """List all active notebook sessions for the current tenant."""
     if not hasattr(request.app.state, "notebook_manager"):
@@ -226,7 +226,7 @@ async def list_sessions(
         )
 
     manager = request.app.state.notebook_manager
-    sessions = await manager.list_sessions(tenant_id=tenant_id)
+    sessions = await manager.list_sessions(account_id=account_id)
 
     return [SessionInfoResponse(**session.to_dict()) for session in sessions]
 
@@ -235,7 +235,7 @@ async def list_sessions(
 async def get_session(
     request: Request,
     session_id: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ) -> SessionInfoResponse:
     """Get information about a specific notebook session."""
     if not hasattr(request.app.state, "notebook_manager"):
@@ -249,7 +249,7 @@ async def get_session(
     try:
         session = await manager.get_session(session_id)
 
-        if session.tenant_id != tenant_id:
+        if session.account_id != account_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this session",
@@ -268,7 +268,7 @@ async def get_session(
 async def terminate_session(
     request: Request,
     session_id: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ) -> None:
     """Terminate a notebook session and clean up resources."""
     if not hasattr(request.app.state, "notebook_manager"):
@@ -282,7 +282,7 @@ async def terminate_session(
     try:
         session = await manager.get_session(session_id)
 
-        if session.tenant_id != tenant_id:
+        if session.account_id != account_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this session",
@@ -301,7 +301,7 @@ async def terminate_session(
 async def websocket_endpoint(
     websocket: WebSocket,
     session_id: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ) -> None:
     """
     WebSocket endpoint for notebook communication.
@@ -320,7 +320,7 @@ async def websocket_endpoint(
         session = await manager.get_session(session_id)
 
         # Verify tenant access
-        if session.tenant_id != tenant_id:
+        if session.account_id != account_id:
             await websocket.close(code=1008, reason="Access denied to this session")
             return
 
@@ -342,7 +342,7 @@ async def websocket_endpoint(
 async def marimo_websocket_proxy(
     websocket: WebSocket,
     session_id: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ) -> None:
     """
     WebSocket proxy for marimo's internal WebSocket.
@@ -362,7 +362,7 @@ async def marimo_websocket_proxy(
         session = await manager.get_session(session_id)
 
         # Verify tenant access
-        if session.tenant_id != tenant_id:
+        if session.account_id != account_id:
             await websocket.close(code=1008, reason="Access denied to this session")
             return
 
@@ -437,7 +437,7 @@ async def proxy_ui(
     request: Request,
     session_id: str,
     path: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
 ):
     """
     Proxy HTTP requests to marimo UI.
@@ -461,7 +461,7 @@ async def proxy_ui(
     try:
         session = await manager.get_session(session_id)
 
-        if session.tenant_id != tenant_id:
+        if session.account_id != account_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this session",
@@ -498,30 +498,26 @@ async def proxy_ui(
         )
 
 
-@router.post(
-    "/files", response_model=NotebookFileResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/files", response_model=NotebookFileResponse, status_code=status.HTTP_201_CREATED)
 async def create_notebook_file(
     file_request: NotebookFileRequest,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     settings: Annotated[Settings, Depends(get_settings_dependency)],
 ) -> NotebookFileResponse:
     """Create a new notebook file."""
-    tenant_notebook_dir = get_tenant_notebook_directory(
-        tenant_id, settings.local_storage_path
-    )
+    account_notebook_dir = get_account_notebook_directory(account_id, settings.local_storage_path)
 
     try:
         notebook_path = await create_notebook(
             filename=file_request.filename,
-            tenant_notebook_dir=tenant_notebook_dir,
+            account_notebook_dir=account_notebook_dir,
             content=file_request.content,
         )
 
         stat = notebook_path.stat()
         return NotebookFileResponse(
             filename=notebook_path.name,
-            path=str(notebook_path.relative_to(tenant_notebook_dir)),
+            path=str(notebook_path.relative_to(account_notebook_dir)),
             size_bytes=stat.st_size,
             modified_at=stat.st_mtime,
         )
@@ -540,33 +536,29 @@ async def create_notebook_file(
 
 @router.get("/files", response_model=list[NotebookFileResponse])
 async def list_notebook_files(
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     settings: Annotated[Settings, Depends(get_settings_dependency)],
 ) -> list[NotebookFileResponse]:
     """List all notebook files for the current tenant."""
-    tenant_notebook_dir = get_tenant_notebook_directory(
-        tenant_id, settings.local_storage_path
-    )
+    account_notebook_dir = get_account_notebook_directory(account_id, settings.local_storage_path)
 
-    notebooks = await list_notebooks(tenant_notebook_dir)
+    notebooks = await list_notebooks(account_notebook_dir)
     return [NotebookFileResponse(**nb) for nb in notebooks]
 
 
 @router.get("/files/{filename}")
 async def get_notebook_file(
     filename: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     settings: Annotated[Settings, Depends(get_settings_dependency)],
 ) -> dict:
     """Get notebook file content."""
-    tenant_notebook_dir = get_tenant_notebook_directory(
-        tenant_id, settings.local_storage_path
-    )
+    account_notebook_dir = get_account_notebook_directory(account_id, settings.local_storage_path)
 
     try:
         content = await read_notebook(
             notebook_path=filename,
-            tenant_notebook_dir=tenant_notebook_dir,
+            account_notebook_dir=account_notebook_dir,
         )
 
         return {"filename": filename, "content": content}
@@ -587,13 +579,11 @@ async def get_notebook_file(
 async def update_notebook_file(
     filename: str,
     file_request: NotebookFileRequest,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     settings: Annotated[Settings, Depends(get_settings_dependency)],
 ) -> dict:
     """Update notebook file content."""
-    tenant_notebook_dir = get_tenant_notebook_directory(
-        tenant_id, settings.local_storage_path
-    )
+    account_notebook_dir = get_account_notebook_directory(account_id, settings.local_storage_path)
 
     if not file_request.content:
         raise HTTPException(
@@ -604,7 +594,7 @@ async def update_notebook_file(
     try:
         await update_notebook(
             notebook_path=filename,
-            tenant_notebook_dir=tenant_notebook_dir,
+            account_notebook_dir=account_notebook_dir,
             content=file_request.content,
         )
 
@@ -625,18 +615,16 @@ async def update_notebook_file(
 @router.delete("/files/{filename}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_notebook_file(
     filename: str,
-    tenant_id: CurrentTenant,
+    account_id: CurrentAccount,
     settings: Annotated[Settings, Depends(get_settings_dependency)],
 ) -> None:
     """Delete a notebook file."""
-    tenant_notebook_dir = get_tenant_notebook_directory(
-        tenant_id, settings.local_storage_path
-    )
+    account_notebook_dir = get_account_notebook_directory(account_id, settings.local_storage_path)
 
     try:
         await delete_notebook(
             notebook_path=filename,
-            tenant_notebook_dir=tenant_notebook_dir,
+            account_notebook_dir=account_notebook_dir,
         )
 
     except NotebookNotFoundException:

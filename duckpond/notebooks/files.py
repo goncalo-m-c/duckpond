@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
 async def create_notebook(
     filename: str,
-    tenant_notebook_dir: Path,
+    account_notebook_dir: Path,
     content: str | None = None,
 ) -> Path:
     """
@@ -51,7 +51,7 @@ async def create_notebook(
 
     Args:
         filename: Notebook filename (must end with .py)
-        tenant_notebook_dir: Tenant's notebook directory
+        account_notebook_dir: Tenant's notebook directory
         content: Optional notebook content (uses default template if None)
 
     Returns:
@@ -63,7 +63,7 @@ async def create_notebook(
     """
     validate_filename(filename)
 
-    notebook_path = tenant_notebook_dir / filename
+    notebook_path = account_notebook_dir / filename
 
     if notebook_path.exists():
         raise FileExistsError(f"Notebook already exists: {filename}")
@@ -81,26 +81,26 @@ async def create_notebook(
     return notebook_path
 
 
-async def list_notebooks(tenant_notebook_dir: Path) -> list[dict]:
+async def list_notebooks(account_notebook_dir: Path) -> list[dict]:
     """
     List all notebooks in tenant's directory.
 
     Args:
-        tenant_notebook_dir: Tenant's notebook directory
+        account_notebook_dir: Tenant's notebook directory
 
     Returns:
         List of notebook metadata dictionaries
     """
-    if not tenant_notebook_dir.exists():
+    if not account_notebook_dir.exists():
         return []
 
     notebooks = []
-    for notebook_file in tenant_notebook_dir.glob("*.py"):
+    for notebook_file in account_notebook_dir.glob("*.py"):
         stat = notebook_file.stat()
         notebooks.append(
             {
                 "filename": notebook_file.name,
-                "path": str(notebook_file.relative_to(tenant_notebook_dir)),
+                "path": str(notebook_file.relative_to(account_notebook_dir)),
                 "size_bytes": stat.st_size,
                 "modified_at": stat.st_mtime,
             }
@@ -111,7 +111,7 @@ async def list_notebooks(tenant_notebook_dir: Path) -> list[dict]:
     logger.debug(
         "notebooks_listed",
         count=len(notebooks),
-        directory=str(tenant_notebook_dir),
+        directory=str(account_notebook_dir),
     )
 
     return notebooks
@@ -119,14 +119,14 @@ async def list_notebooks(tenant_notebook_dir: Path) -> list[dict]:
 
 async def read_notebook(
     notebook_path: str | Path,
-    tenant_notebook_dir: Path,
+    account_notebook_dir: Path,
 ) -> str:
     """
     Read notebook file content.
 
     Args:
         notebook_path: Path to notebook (relative or absolute)
-        tenant_notebook_dir: Tenant's notebook directory
+        account_notebook_dir: Tenant's notebook directory
 
     Returns:
         Notebook content as string
@@ -135,7 +135,7 @@ async def read_notebook(
         PathSecurityException: If path validation fails
         NotebookNotFoundException: If file doesn't exist
     """
-    validated_path = validate_notebook_path(notebook_path, tenant_notebook_dir)
+    validated_path = validate_notebook_path(notebook_path, account_notebook_dir)
 
     if not validated_path.exists():
         raise NotebookNotFoundException(str(validated_path))
@@ -153,7 +153,7 @@ async def read_notebook(
 
 async def update_notebook(
     notebook_path: str | Path,
-    tenant_notebook_dir: Path,
+    account_notebook_dir: Path,
     content: str,
 ) -> Path:
     """
@@ -161,7 +161,7 @@ async def update_notebook(
 
     Args:
         notebook_path: Path to notebook (relative or absolute)
-        tenant_notebook_dir: Tenant's notebook directory
+        account_notebook_dir: Tenant's notebook directory
         content: New notebook content
 
     Returns:
@@ -171,7 +171,7 @@ async def update_notebook(
         PathSecurityException: If path validation fails
         NotebookNotFoundException: If file doesn't exist
     """
-    validated_path = validate_notebook_path(notebook_path, tenant_notebook_dir)
+    validated_path = validate_notebook_path(notebook_path, account_notebook_dir)
 
     if not validated_path.exists():
         raise NotebookNotFoundException(str(validated_path))
@@ -189,20 +189,20 @@ async def update_notebook(
 
 async def delete_notebook(
     notebook_path: str | Path,
-    tenant_notebook_dir: Path,
+    account_notebook_dir: Path,
 ) -> None:
     """
     Delete notebook file.
 
     Args:
         notebook_path: Path to notebook (relative or absolute)
-        tenant_notebook_dir: Tenant's notebook directory
+        account_notebook_dir: Tenant's notebook directory
 
     Raises:
         PathSecurityException: If path validation fails
         NotebookNotFoundException: If file doesn't exist
     """
-    validated_path = validate_notebook_path(notebook_path, tenant_notebook_dir)
+    validated_path = validate_notebook_path(notebook_path, account_notebook_dir)
 
     if not validated_path.exists():
         raise NotebookNotFoundException(str(validated_path))
