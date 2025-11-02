@@ -1,7 +1,7 @@
 """API authentication using account API keys."""
 
 import structlog
-from fastapi import Depends, HTTPException, Security, status
+from fastapi import Depends, HTTPException, Query, Request, Security, status
 from fastapi.security import APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,20 +45,25 @@ class AuthenticatedAccount:
 
 async def get_current_account(
     api_key: str | None = Security(api_key_header),
+    request: Request,
+    api_key_header_value: str | None = Security(api_key_header),
+    api_key_query: str | None = Query(default=None, alias="X-API-KEY"),
     session: AsyncSession = Depends(get_db_session),
 ) -> AuthenticatedAccount:
     """
     Validate API key and return authenticated account.
 
     This dependency performs API key authentication by:
-    1. Extracting API key from X-API-Key header
+    1. Extracting API key from X-API-Key header OR X-API-KEY query parameter
     2. Using cached authenticator for fast validation
     3. Verifying the key using bcrypt (cached for 30s)
     4. Loading the associated account (from cache if available)
     5. Checking account is active
 
     Args:
-        api_key: API key from request header
+        request: FastAPI request
+        api_key_header_value: API key from request header
+        api_key_query: API key from query parameter (for browser access)
         session: Database session
 
     Returns:
@@ -67,6 +72,8 @@ async def get_current_account(
     Raises:
         HTTPException: 401 if authentication fails
     """
+    # Try header first, then query parameter
+    api_key = api_key_header_value or api_key_query
     if not api_key:
         logger.warning("authentication_failed", reason="missing_api_key")
         raise HTTPException(
@@ -103,6 +110,8 @@ async def get_current_account(
 
 async def get_current_account_optional(
     api_key: str | None = Security(api_key_header),
+    api_key_header_value: str | None = Security(api_key_header),
+    api_key_query: str | None = Query(default=None, alias="X-API-KEY"),
     session: AsyncSession = Depends(get_db_session),
 ) -> AuthenticatedAccount | None:
     """
@@ -112,7 +121,9 @@ async def get_current_account_optional(
     401 if API key is missing. Still raises 401 if key is present but invalid.
 
     Args:
-        api_key: API key from request header
+        request: FastAPI request
+        api_key_header_value: API key from request header
+        api_key_query: API key from query parameter (for browser access)
         session: Database session
 
     Returns:
@@ -121,7 +132,14 @@ async def get_current_account_optional(
     Raises:
         HTTPException: 401 if authentication fails with present but invalid key
     """
+    # Try header first, then query parameter
+    api_key = api_key_header_value or api_key_query
+
     if not api_key:
         return None
 
-    return await get_current_account(api_key=api_key, session=session)
+    return await get_current_tenant(
+        api_key_header_value=api_key_header_value,
+        api_key_query=api_key_query,
+        session=session,
+    )

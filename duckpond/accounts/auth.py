@@ -106,12 +106,27 @@ class APIKeyAuthenticator:
         """
         cached = self._get_from_cache(api_key)
         if cached:
+            # Cache hit - need to reload tenant and api_key from database
             logger.debug(
                 "api_key_cache_hit",
                 account_id=cached.account.account_id,
-                age=time.time() - cached.timestamp,
+                cache_age=time.time() - cached.timestamp,
             )
-            return (cached.account, cached.api_key)
+
+            # Reload from database to get properly attached objects
+            result = await session.execute(
+                select(Account, APIKey)
+                .join(APIKey, Account.account_id == APIKey.account_id)
+                .where(Account.account_id == cached.account.account_id)
+                .where(APIKey.key_id == cached.api_key.key_id)
+            )
+            row = result.first()
+            if row:
+                return row.Tenant, row.APIKey
+            else:
+                # Cached entry no longer valid, remove from cache
+                logger.warning("cached_entry_not_found_in_db", tenant_id=cached.account.account_id)
+                del self._cache[api_key]
 
         logger.debug("api_key_cache_miss", key_prefix=api_key[:8])
 
@@ -248,9 +263,7 @@ class APIKeyAuthenticator:
             account_id: Account ID to invalidate
         """
         keys_to_remove = [
-            key
-            for key, cached in self._cache.items()
-            if cached.account.account_id == account_id
+            key for key, cached in self._cache.items() if cached.account.account_id == account_id
         ]
 
         for key in keys_to_remove:
@@ -326,9 +339,7 @@ def verify_api_key(api_key: str, key_hash: str) -> bool:
 _authenticator: Optional[APIKeyAuthenticator] = None
 
 
-def get_authenticator(
-    cache_size: int = 1000, cache_ttl: int = CACHE_TTL
-) -> APIKeyAuthenticator:
+def get_authenticator(cache_size: int = 1000, cache_ttl: int = CACHE_TTL) -> APIKeyAuthenticator:
     """
     Get or create global authenticator instance.
 

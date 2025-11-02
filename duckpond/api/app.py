@@ -17,10 +17,16 @@ from duckpond.api.middleware import (
     RequestIDMiddleware,
     AccountContextMiddleware,
 )
-from duckpond.api.routers import datasets_router, health_router, upload_router
+from duckpond.api.routers import (
+    datasets_router,
+    health_router,
+    upload_router,
+    notebooks_router,
+)
 from duckpond.api.routers.query import router as query_router
 from duckpond.api.routers.streaming import router as streaming_router
 from duckpond.config import get_settings
+from duckpond.notebooks import NotebookManager
 from duckpond.streaming.buffer_manager import BufferManager
 
 logger = structlog.get_logger(__name__)
@@ -71,6 +77,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             storage_path=str(storage_path),
         )
 
+        if settings.notebook_enabled:
+            try:
+                app.state.notebook_manager = NotebookManager(settings)
+                await app.state.notebook_manager.start()
+                logger.info(
+                    "notebook_manager_initialized",
+                    enabled=True,
+                )
+            except Exception as e:
+                logger.warning(
+                    "notebook_manager_initialization_failed",
+                    error=str(e),
+                    exc_info=True,
+                )
+        else:
+            logger.info("notebook_manager_disabled")
+
         logger.info("application_initialized")
     except Exception as e:
         logger.error("initialization_failed", error=str(e), exc_info=True)
@@ -80,6 +103,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("application_shutting_down")
     try:
+        if hasattr(app.state, "notebook_manager"):
+            await app.state.notebook_manager.stop()
+            logger.info("notebook_manager_stopped")
+
         if hasattr(app.state, "buffer_manager"):
             await app.state.buffer_manager.close()
             logger.info("buffer_manager_closed")
@@ -119,6 +146,7 @@ def create_app() -> FastAPI:
     app.include_router(upload_router)
     app.include_router(query_router)
     app.include_router(streaming_router)
+    app.include_router(notebooks_router)
 
     @app.get("/", tags=["info"])
     async def root() -> dict[str, str]:

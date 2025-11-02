@@ -292,6 +292,48 @@ class Settings(BaseSettings):
         default="json", description="Log format"
     )
 
+    notebook_session_timeout_seconds: int = Field(
+        default=3600,
+        ge=300,
+        description="Notebook session inactivity timeout (default 1 hour, min 5 minutes)",
+    )
+    notebook_enabled: bool = Field(
+        default=True,
+        description="Enable marimo notebook integration",
+    )
+    notebook_port_range_start: int = Field(
+        default=10000,
+        ge=1024,
+        le=65535,
+        description="Start of port range for marimo processes",
+    )
+    notebook_port_range_end: int = Field(
+        default=20000,
+        ge=1024,
+        le=65535,
+        description="End of port range for marimo processes",
+    )
+    notebook_max_concurrent_sessions: int = Field(
+        default=100,
+        ge=1,
+        description="Maximum concurrent notebook sessions across all tenants",
+    )
+    notebook_max_memory_mb: int = Field(
+        default=2048,
+        ge=256,
+        description="Maximum memory per notebook session in MB",
+    )
+    notebook_startup_timeout_seconds: int = Field(
+        default=30,
+        ge=5,
+        description="Timeout for marimo process startup",
+    )
+    notebook_health_check_interval_seconds: int = Field(
+        default=30,
+        ge=10,
+        description="Interval for notebook process health checks",
+    )
+
     @field_validator("local_storage_path", "temp_upload_dir", "wal_directory")
     @classmethod
     def validate_paths(cls, v: Path) -> Path:
