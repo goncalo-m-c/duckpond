@@ -44,8 +44,6 @@ class AuthenticatedAccount:
 
 
 async def get_current_account(
-    api_key: str | None = Security(api_key_header),
-    request: Request,
     api_key_header_value: str | None = Security(api_key_header),
     api_key_query: str | None = Query(default=None, alias="X-API-KEY"),
     session: AsyncSession = Depends(get_db_session),
@@ -109,7 +107,6 @@ async def get_current_account(
 
 
 async def get_current_account_optional(
-    api_key: str | None = Security(api_key_header),
     api_key_header_value: str | None = Security(api_key_header),
     api_key_query: str | None = Query(default=None, alias="X-API-KEY"),
     session: AsyncSession = Depends(get_db_session),
@@ -138,7 +135,7 @@ async def get_current_account_optional(
     if not api_key:
         return None
 
-    return await get_current_tenant(
+    return await get_current_account(
         api_key_header_value=api_key_header_value,
         api_key_query=api_key_query,
         session=session,

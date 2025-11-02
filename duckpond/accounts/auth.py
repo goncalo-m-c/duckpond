@@ -122,10 +122,10 @@ class APIKeyAuthenticator:
             )
             row = result.first()
             if row:
-                return row.Tenant, row.APIKey
+                return row.Account, row.APIKey
             else:
                 # Cached entry no longer valid, remove from cache
-                logger.warning("cached_entry_not_found_in_db", tenant_id=cached.account.account_id)
+                logger.warning("cached_entry_not_found_in_db", account_id=cached.account.account_id)
                 del self._cache[api_key]
 
         logger.debug("api_key_cache_miss", key_prefix=api_key[:8])
