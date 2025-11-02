@@ -1,7 +1,7 @@
-"""Marimo process management."""
+"""Marimo process management with Docker isolation."""
 
 import asyncio
-import signal
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -18,10 +18,10 @@ logger = structlog.get_logger(__name__)
 
 class MarimoProcess:
     """
-    Wrapper for marimo subprocess with health monitoring.
+    Wrapper for marimo container with health monitoring.
 
-    Manages the lifecycle of a marimo editor process including:
-    - Process spawning with proper environment
+    Manages the lifecycle of a marimo editor process running in Docker including:
+    - Container spawning with proper isolation and resource limits
     - Startup health checks
     - Ongoing health monitoring
     - Graceful shutdown
@@ -32,119 +32,154 @@ class MarimoProcess:
         notebook_path: Path,
         port: int,
         tenant_data_dir: Path,
+        tenant_id: str,
+        docker_image: str = "python:3.12-slim",
+        memory_limit_mb: int = 2048,
+        cpu_limit: float = 2.0,
         startup_timeout: int = 30,
     ):
         """
-        Initialize marimo process wrapper.
+        Initialize marimo container wrapper.
 
         Args:
             notebook_path: Absolute path to notebook file
             port: Port for marimo to listen on
             tenant_data_dir: Working directory for marimo process
+            tenant_id: Tenant identifier for container naming
+            docker_image: Docker image to use
+            memory_limit_mb: Memory limit in megabytes
+            cpu_limit: CPU limit (1.0 = 1 core)
             startup_timeout: Maximum seconds to wait for startup
         """
         self.notebook_path = notebook_path
         self.port = port
         self.tenant_data_dir = tenant_data_dir
+        self.tenant_id = tenant_id
+        self.docker_image = docker_image
+        self.memory_limit_mb = memory_limit_mb
+        self.cpu_limit = cpu_limit
         self.startup_timeout = startup_timeout
         self.process: Optional[asyncio.subprocess.Process] = None
+        self.container_id: Optional[str] = None
 
-    async def start(self) -> asyncio.subprocess.Process:
+    async def start(self) -> str:
         """
-        Start marimo process and wait for it to be healthy.
+        Start marimo container and wait for it to be healthy.
 
         Returns:
-            The started subprocess
+            The container ID
 
         Raises:
-            ProcessStartupException: If process fails to start or become healthy
+            ProcessStartupException: If container fails to start or become healthy
         """
         import os
-        import sys
 
-        # Inherit current environment and add DuckDB path
-        env = os.environ.copy()
+        # Generate container name
+        container_name = f"marimo-{self.tenant_id}-{self.port}"
 
-        # Ensure marimo uses the same Python for its kernel
-        # This prevents marimo from using system Python instead of virtualenv Python
-        # We prepend the virtualenv bin directory to PATH so that when marimo
-        # spawns the kernel, it finds our virtualenv Python first
-        venv_bin = os.path.dirname(sys.executable)
-        if "PATH" in env:
-            env["PATH"] = f"{venv_bin}:{env['PATH']}"
-        else:
-            env["PATH"] = venv_bin
+        # Relative path within container
+        notebook_rel_path = self.notebook_path.relative_to(self.tenant_data_dir)
 
-        # Use sys.executable to run marimo with the same Python interpreter
+        # Build docker run command
         command = [
-            sys.executable,
-            "-m",
-            "marimo",
-            "edit",
-            "--headless",
-            "--no-token",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(self.port),
-            str(self.notebook_path),
+            "docker",
+            "run",
+            "--rm",  # Auto-remove on stop
+            "--detach",  # Run in background
+            "--name",
+            container_name,
+            # Resource limits
+            f"--memory={self.memory_limit_mb}m",
+            f"--cpus={self.cpu_limit}",
+            # Network
+            "--network=host",  # Use host network for simplicity
+            # Volume mounts
+            "-v",
+            f"{self.tenant_data_dir}:/workspace",
+            # Working directory
+            "-w",
+            "/workspace",
         ]
 
+        # Add S3 credentials if available
+        if "AWS_ACCESS_KEY_ID" in os.environ:
+            command.extend(
+                ["-e", f"AWS_ACCESS_KEY_ID={os.environ['AWS_ACCESS_KEY_ID']}"]
+            )
+        if "AWS_SECRET_ACCESS_KEY" in os.environ:
+            command.extend(
+                ["-e", f"AWS_SECRET_ACCESS_KEY={os.environ['AWS_SECRET_ACCESS_KEY']}"]
+            )
+        if "AWS_SESSION_TOKEN" in os.environ:
+            command.extend(
+                ["-e", f"AWS_SESSION_TOKEN={os.environ['AWS_SESSION_TOKEN']}"]
+            )
+        if "AWS_REGION" in os.environ:
+            command.extend(["-e", f"AWS_REGION={os.environ['AWS_REGION']}"])
+
+        # Image and command
+        command.extend(
+            [
+                self.docker_image,
+                "sh",
+                "-c",
+                f"pip install --quiet marimo duckdb && "
+                f"python -m marimo edit --headless --no-token "
+                f"--host 0.0.0.0 --port {self.port} {notebook_rel_path}",
+            ]
+        )
+
         logger.info(
-            "starting_marimo_process",
-            command=" ".join(command),
-            cwd=str(self.tenant_data_dir),
+            "starting_marimo_container",
+            container_name=container_name,
+            image=self.docker_image,
             port=self.port,
-            notebook=str(self.notebook_path),
+            memory_mb=self.memory_limit_mb,
+            cpu_limit=self.cpu_limit,
+            notebook=str(notebook_rel_path),
         )
 
         try:
-            # Create log files for marimo output
-            import tempfile
-
-            log_dir = tempfile.gettempdir()
-            stdout_log = f"{log_dir}/marimo_{self.port}_stdout.log"
-            stderr_log = f"{log_dir}/marimo_{self.port}_stderr.log"
-
-            stdout_file = open(stdout_log, "w")
-            stderr_file = open(stderr_log, "w")
-
-            logger.info(
-                "marimo_logs_created",
-                stdout_log=stdout_log,
-                stderr_log=stderr_log,
-            )
-
+            # Start container and capture container ID
             self.process = await asyncio.create_subprocess_exec(
                 *command,
-                cwd=str(self.tenant_data_dir),
-                env=env,
-                stdout=stdout_file,
-                stderr=stderr_file,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
 
+            # Wait for process to complete and get output
+            stdout, stderr = await self.process.communicate()
+
+            if self.process.returncode != 0:
+                error_msg = stderr.decode() if stderr else "Unknown error"
+                raise ProcessStartupException(f"Failed to start container: {error_msg}")
+
+            self.container_id = stdout.decode().strip()
+
             logger.info(
-                "marimo_process_spawned",
-                pid=self.process.pid,
+                "marimo_container_started",
+                container_id=self.container_id[:12],
+                container_name=container_name,
                 port=self.port,
             )
 
+            # Wait for container and marimo to be healthy
             await self._wait_for_health()
 
             logger.info(
-                "marimo_process_ready",
-                pid=self.process.pid,
+                "marimo_container_ready",
+                container_id=self.container_id[:12],
                 port=self.port,
             )
 
-            return self.process
+            return self.container_id
 
         except ProcessStartupException:
             await self._cleanup_failed_start()
             raise
         except Exception as e:
             logger.error(
-                "marimo_process_start_failed",
+                "marimo_container_start_failed",
                 error=str(e),
                 exc_info=True,
             )
@@ -153,12 +188,12 @@ class MarimoProcess:
 
     async def _wait_for_health(self) -> None:
         """
-        Wait for marimo process to become healthy.
+        Wait for marimo container to become healthy.
 
         Polls the health endpoint until it responds or timeout is reached.
 
         Raises:
-            ProcessStartupException: If process doesn't become healthy in time
+            ProcessStartupException: If container doesn't become healthy in time
         """
         health_url = f"http://127.0.0.1:{self.port}/health"
         start_time = asyncio.get_event_loop().time()
@@ -167,15 +202,17 @@ class MarimoProcess:
             while True:
                 elapsed = asyncio.get_event_loop().time() - start_time
                 if elapsed > self.startup_timeout:
-                    stderr = await self._read_stderr()
+                    logs = await self._read_container_logs()
                     raise ProcessStartupException(
-                        f"Startup timeout after {self.startup_timeout}s. Stderr: {stderr}"
+                        f"Startup timeout after {self.startup_timeout}s. Container logs: {logs}"
                     )
 
-                if self.process and self.process.returncode is not None:
-                    stderr = await self._read_stderr()
+                # Check if container is still running
+                is_running = await self._check_container_running()
+                if not is_running:
+                    logs = await self._read_container_logs()
                     raise ProcessStartupException(
-                        f"Process exited with code {self.process.returncode}. Stderr: {stderr}"
+                        f"Container stopped unexpectedly. Logs: {logs}"
                     )
 
                 try:
@@ -183,6 +220,9 @@ class MarimoProcess:
                     if response.status_code == 200:
                         logger.debug(
                             "health_check_passed",
+                            container_id=self.container_id[:12]
+                            if self.container_id
+                            else None,
                             port=self.port,
                             elapsed=f"{elapsed:.2f}s",
                         )
@@ -192,56 +232,97 @@ class MarimoProcess:
 
                 await asyncio.sleep(0.5)
 
-    async def _read_stderr(self) -> str:
+    async def _check_container_running(self) -> bool:
         """
-        Read stderr from process for error diagnostics.
+        Check if container is still running.
 
         Returns:
-            Stderr content as string (up to 1KB)
+            True if container is running, False otherwise
         """
-        if not self.process or not self.process.stderr:
+        if not self.container_id:
+            return False
+
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "docker",
+                "inspect",
+                "-f",
+                "{{.State.Running}}",
+                self.container_id,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            stdout, _ = await process.communicate()
+            return stdout.decode().strip() == "true"
+
+        except Exception as e:
+            logger.warning("container_check_failed", error=str(e))
+            return False
+
+    async def _read_container_logs(self) -> str:
+        """
+        Read container logs for error diagnostics.
+
+        Returns:
+            Container logs as string (last 50 lines)
+        """
+        if not self.container_id:
             return ""
 
         try:
-            stderr_bytes = await asyncio.wait_for(
-                self.process.stderr.read(1024), timeout=1.0
+            process = await asyncio.create_subprocess_exec(
+                "docker",
+                "logs",
+                "--tail",
+                "50",
+                self.container_id,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
-            return stderr_bytes.decode("utf-8", errors="replace")
+
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5.0)
+            logs = stdout.decode("utf-8", errors="replace")
+            if stderr:
+                logs += "\n" + stderr.decode("utf-8", errors="replace")
+            return logs[:2000]  # Limit log size
+
         except asyncio.TimeoutError:
-            return "(stderr read timeout)"
+            return "(log read timeout)"
         except Exception as e:
-            return f"(error reading stderr: {str(e)})"
+            return f"(error reading logs: {str(e)})"
 
     async def _cleanup_failed_start(self) -> None:
         """Clean up resources after failed startup."""
-        if self.process:
+        if self.container_id:
             try:
-                self.process.terminate()
-                await asyncio.wait_for(self.process.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
-                if self.process:
-                    self.process.kill()
-            except Exception as e:
-                logger.warning(
-                    "cleanup_failed_start_error",
-                    error=str(e),
+                await asyncio.create_subprocess_exec(
+                    "docker", "stop", "-t", "5", self.container_id
                 )
+            except Exception as e:
+                logger.warning("cleanup_failed_start_error", error=str(e))
 
     async def check_health(self) -> bool:
         """
-        Check if marimo process is healthy.
+        Check if marimo container is healthy.
 
         Returns:
             True if healthy, False otherwise
         """
-        if not self.process or self.process.returncode is not None:
+        if not self.container_id:
+            return False
+
+        # Check container is running
+        is_running = await self._check_container_running()
+        if not is_running:
             logger.warning(
-                "process_not_running",
+                "container_not_running",
+                container_id=self.container_id[:12],
                 port=self.port,
-                returncode=self.process.returncode if self.process else None,
             )
             return False
 
+        # Check marimo health endpoint
         health_url = f"http://127.0.0.1:{self.port}/health"
 
         try:
@@ -250,10 +331,15 @@ class MarimoProcess:
                 is_healthy = response.status_code == 200
 
                 if is_healthy:
-                    logger.debug("health_check_ok", port=self.port)
+                    logger.debug(
+                        "health_check_ok",
+                        container_id=self.container_id[:12],
+                        port=self.port,
+                    )
                 else:
                     logger.warning(
                         "health_check_failed",
+                        container_id=self.container_id[:12],
                         port=self.port,
                         status=response.status_code,
                     )
@@ -263,64 +349,65 @@ class MarimoProcess:
         except Exception as e:
             logger.warning(
                 "health_check_error",
+                container_id=self.container_id[:12],
                 port=self.port,
                 error=str(e),
             )
             return False
 
-    async def stop(self, timeout: int = 5) -> None:
+    async def stop(self, timeout: int = 10) -> None:
         """
-        Stop marimo process gracefully.
+        Stop marimo container gracefully.
 
-        Sends SIGTERM and waits for graceful shutdown. If timeout is reached,
-        sends SIGKILL to force termination.
+        Sends docker stop which gives the container time to shut down gracefully.
+        If timeout is reached, Docker will forcefully kill the container.
 
         Args:
             timeout: Seconds to wait for graceful shutdown
         """
-        if not self.process:
+        if not self.container_id:
             return
 
-        pid = self.process.pid
-        logger.info("stopping_marimo_process", pid=pid, port=self.port)
+        logger.info(
+            "stopping_marimo_container",
+            container_id=self.container_id[:12],
+            port=self.port,
+        )
 
         try:
-            self.process.send_signal(signal.SIGTERM)
+            process = await asyncio.create_subprocess_exec(
+                "docker",
+                "stop",
+                "-t",
+                str(timeout),
+                self.container_id,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
 
-            try:
-                await asyncio.wait_for(self.process.wait(), timeout=timeout)
-                logger.info(
-                    "marimo_process_stopped_gracefully",
-                    pid=pid,
-                    port=self.port,
-                )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    "marimo_process_timeout_killing",
-                    pid=pid,
-                    port=self.port,
-                )
-                self.process.kill()
-                await self.process.wait()
-                logger.info("marimo_process_killed", pid=pid, port=self.port)
+            await process.wait()
 
-        except ProcessLookupError:
-            logger.debug("marimo_process_already_stopped", pid=pid)
+            logger.info(
+                "marimo_container_stopped",
+                container_id=self.container_id[:12],
+                port=self.port,
+            )
+
         except Exception as e:
             logger.error(
-                "marimo_process_stop_error",
-                pid=pid,
+                "marimo_container_stop_error",
+                container_id=self.container_id[:12],
                 error=str(e),
                 exc_info=True,
             )
 
     def is_alive(self) -> bool:
         """
-        Check if process is still running.
+        Check if container is still running (synchronous check).
 
         Returns:
-            True if process is running, False otherwise
+            True if container exists, False otherwise
+
+        Note: This is a quick check. Use check_health() for full health validation.
         """
-        if not self.process:
-            return False
-        return self.process.returncode is None
+        return self.container_id is not None

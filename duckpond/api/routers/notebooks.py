@@ -345,6 +345,7 @@ async def websocket_endpoint(
 async def marimo_websocket_proxy(
     websocket: WebSocket,
     session_id: str,
+    tenant_id: CurrentTenant,
 ) -> None:
     """
     WebSocket proxy for marimo's internal WebSocket.
@@ -358,30 +359,6 @@ async def marimo_websocket_proxy(
 
     # Authenticate using multi-source helper with manual session management
     from duckpond.api.dependencies import get_db_session
-
-    db_session = None
-    try:
-        async for session_gen in get_db_session():
-            db_session = session_gen
-            break
-
-        tenant_id = await authenticate_from_multi_source(websocket, db_session)
-    except HTTPException as e:
-        if db_session:
-            await db_session.close()
-        await websocket.close(code=1008, reason=e.detail)
-        return
-    except Exception as e:
-        if db_session:
-            await db_session.close()
-        logger.error(
-            "marimo_ws_auth_error",
-            session_id=session_id,
-            error=str(e),
-            exc_info=True,
-        )
-        await websocket.close(code=1011, reason="Authentication error")
-        return
 
     manager = websocket.app.state.notebook_manager
 
@@ -454,9 +431,6 @@ async def marimo_websocket_proxy(
             exc_info=True,
         )
         await websocket.close(code=1011, reason="Internal error")
-    finally:
-        if db_session:
-            await db_session.close()
 
 
 @router.api_route(

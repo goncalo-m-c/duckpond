@@ -333,6 +333,16 @@ class Settings(BaseSettings):
         ge=10,
         description="Interval for notebook process health checks",
     )
+    notebook_docker_image: str = Field(
+        default="python:3.12-slim",
+        description="Docker image to use for marimo containers",
+    )
+    notebook_cpu_limit: float = Field(
+        default=2.0,
+        ge=0.1,
+        le=16.0,
+        description="CPU limit per notebook container (1.0 = 1 core)",
+    )
 
     @field_validator("local_storage_path", "temp_upload_dir", "wal_directory")
     @classmethod

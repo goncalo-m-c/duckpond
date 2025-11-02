@@ -127,8 +127,24 @@ class NotebookManager:
 
         validated_path = validate_notebook_path(notebook_path, tenant_notebook_dir)
 
+        # Create notebook if it doesn't exist
         if not validated_path.exists():
-            raise NotebookNotFoundException(str(validated_path))
+            from duckpond.notebooks.files import create_notebook
+
+            logger.info(
+                "creating_missing_notebook",
+                tenant_id=tenant_id,
+                notebook=str(validated_path),
+            )
+
+            # Ensure notebook directory exists
+            tenant_notebook_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create notebook with default template
+            await create_notebook(
+                filename=validated_path.name,
+                tenant_notebook_dir=tenant_notebook_dir,
+            )
 
         port = self._allocate_port()
 
@@ -147,16 +163,20 @@ class NotebookManager:
                 notebook_path=validated_path,
                 port=port,
                 tenant_data_dir=tenant_data_dir,
+                tenant_id=tenant_id,
+                docker_image=self.settings.notebook_docker_image,
+                memory_limit_mb=self.settings.notebook_max_memory_mb,
+                cpu_limit=self.settings.notebook_cpu_limit,
                 startup_timeout=self.settings.notebook_startup_timeout_seconds,
             )
 
-            process = await marimo_process.start()
+            container_id = await marimo_process.start()
 
             session = NotebookSession(
                 session_id=session_id,
                 tenant_id=tenant_id,
                 notebook_path=validated_path,
-                process=process,
+                process=marimo_process,  # Store the MarimoProcess wrapper
                 port=port,
                 status=SessionStatus.RUNNING,
             )
@@ -168,7 +188,7 @@ class NotebookManager:
                 session_id=session_id,
                 tenant_id=tenant_id,
                 port=port,
-                pid=session.pid,
+                container_id=container_id[:12],
             )
 
             return session
@@ -243,19 +263,8 @@ class NotebookManager:
 
         session.status = SessionStatus.STOPPING
 
-        marimo_process = MarimoProcess(
-            notebook_path=session.notebook_path,
-            port=session.port,
-            tenant_data_dir=get_tenant_data_directory(
-                session.tenant_id, self.settings.local_storage_path
-            ),
-            database_path=get_tenant_database_path(
-                session.tenant_id, self.settings.local_storage_path
-            ),
-        )
-        marimo_process.process = session.process
-
-        await marimo_process.stop()
+        # Use the MarimoProcess stored in the session
+        await session.process.stop()
 
         self._release_port(session.port)
 
@@ -350,19 +359,8 @@ class NotebookManager:
                         unhealthy_sessions.append(session_id)
                         continue
 
-                    marimo_process = MarimoProcess(
-                        notebook_path=session.notebook_path,
-                        port=session.port,
-                        tenant_data_dir=get_tenant_data_directory(
-                            session.tenant_id, self.settings.local_storage_path
-                        ),
-                        database_path=get_tenant_database_path(
-                            session.tenant_id, self.settings.local_storage_path
-                        ),
-                    )
-                    marimo_process.process = session.process
-
-                    is_healthy = await marimo_process.check_health()
+                    # Use the MarimoProcess stored in the session
+                    is_healthy = await session.process.check_health()
 
                     if is_healthy:
                         session.reset_health_checks()
