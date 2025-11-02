@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>DuckPond - Multi-Tenant Data Platform Powered by DuckDB</title>
+        <title>DuckPond - Self-Hosted Analytics for Small Teams</title>
         <style>
             * {
                 margin: 0;
@@ -441,6 +441,10 @@
                 list-style: none;
             }
 
+            .use-case ul {
+                list-style: none;
+            }
+
             .footer-section li {
                 margin-bottom: 10px;
             }
@@ -494,15 +498,11 @@
                 <div class="header-content">
                     <a href="#" class="logo">DuckPond</a>
                     <nav>
-                        <a href="#features">Features</a>
-                        <a href="#architecture">Architecture</a>
-                        <a href="#performance">Performance</a>
                         <a
-                            href="https://github.com/yourusername/duckpond-py"
+                            href="https://github.com/wundervaflja/duckpond"
                             target="_blank"
                             >GitHub</a
                         >
-                        <a href="#" class="cta-button">Get Started</a>
                     </nav>
                 </div>
             </div>
@@ -510,91 +510,96 @@
 
         <section class="hero">
             <div class="container">
-                <h1>The No-Bullshit<br />Data Warehouse</h1>
+                <h1>Customer-Facing Analytics<br />That You Control</h1>
                 <p>
-                    Deploy to your own stack. Query gigabytes in milliseconds on
-                    a single server. Multi-tenant by design with DuckLake
-                    catalogs. Upload CSVs, stream metrics, run SQL. No cloud
-                    fees, no vendor lock-in.
+                    Self-hosted multi-tenant analytics for small teams building
+                    SaaS products. Give each customer their own isolated data
+                    warehouse without Snowflake's unpredictable costs. Deploy to
+                    your cloud, query gigabytes in milliseconds, scale to
+                    hundreds of tenants on a single server.
                 </p>
-                <div class="hero-buttons">
-                    <a href="#" class="button-primary">Deploy in 5 Minutes</a>
-                    <a href="#" class="button-secondary">View Documentation</a>
-                </div>
+                <div class="hero-buttons"></div>
             </div>
         </section>
 
         <section class="features" id="features">
             <div class="container">
+                <h2 class="section-title">What is DuckPond?</h2>
+                <p
+                    style="
+                        max-width: 800px;
+                        margin: 0 auto 60px;
+                        text-align: center;
+                        font-size: 18px;
+                        line-height: 1.6;
+                        color: var(--text-light);
+                    "
+                >
+                    A self-hosted analytics platform that gives each of your
+                    customers their own isolated data warehouse. Built on DuckDB
+                    for fast columnar queries. Deploy to your cloud, query
+                    gigabytes in milliseconds, pay only for your infrastructure
+                    - not per query.
+                </p>
                 <h2 class="section-title">
                     Everything You Need, Nothing You Don't
                 </h2>
                 <div class="features-grid">
                     <div class="feature-card">
-                        <h3>Zero Cloud Costs</h3>
+                        <h3>Predictable Costs</h3>
                         <p>
-                            Self-hosted on your infrastructure. No per-query
-                            fees, no surprise bills. SQLite or PostgreSQL for
-                            metadata, local storage for data. You own
-                            everything.
+                            Deploy to your own AWS/GCP/Azure. No per-query fees,
+                            no surprise bills, no data egress charges. You own
+                            your infrastructure and your data never leaves your
+                            VPC.
                         </p>
                     </div>
                     <div class="feature-card">
-                        <h3>Stupid Fast</h3>
+                        <h3>Fast Out of the Box</h3>
                         <p>
-                            DuckDB's columnar engine processes Parquet at memory
-                            speed. Query millions of rows in milliseconds.
-                            Single process, no cluster setup, no Spark drama.
+                            DuckDB's columnar engine queries millions of rows in
+                            under 100ms. No cluster to configure, no Spark
+                            complexity. Just fast SQL on a single server that
+                            handles 100+ concurrent queries.
                         </p>
                     </div>
                     <div class="feature-card">
-                        <h3>DuckLake Catalogs</h3>
+                        <h3>True Multi-Tenant Isolation</h3>
                         <p>
-                            Each tenant gets their own DuckLake catalog in
-                            SQLite (PostgreSQL support coming). ACID
-                            transactions, schema versioning, and proper data
-                            management. Not just files in folders.
+                            Each customer gets their own DuckLake catalog with
+                            isolated storage, API keys, and quotas. No complex
+                            RBAC configuration. No noisy neighbor problems.
+                            Built for embedded analytics from day one.
                         </p>
                     </div>
                     <div class="feature-card">
-                        <h3>Multi-Tenant from Day One</h3>
+                        <h3>Deploy in Hours, Not Months</h3>
                         <p>
-                            Isolated accounts with their own catalogs, storage
-                            paths, and API keys. Configurable quotas. Give each
-                            customer their own space without complex RBAC
-                            configuration.
+                            Docker containers with resource limits, health
+                            monitoring, and automatic cleanup. PostgreSQL or
+                            SQLite for metadata. Start with a few tenants, add
+                            more as you grow.
                         </p>
                     </div>
                     <div class="feature-card">
-                        <h3>Upload & Stream</h3>
+                        <h3>Flexible Data Ingestion</h3>
                         <p>
-                            Upload CSV/JSON/Parquet files, auto-convert to
-                            Parquet. Stream Arrow IPC or Prometheus remote write
-                            for telemetry. Files land in your catalog, ready to
-                            query.
+                            CSV/JSON/Parquet file uploads with auto-conversion.
+                            Arrow IPC streaming for high-throughput ingestion.
+                            Prometheus remote write for metrics. All data lands
+                            in your catalog, queryable via SQL immediately.
                         </p>
                     </div>
                     <div class="feature-card">
-                        <h3>Query Everything</h3>
+                        <h3>Interactive Notebooks</h3>
                         <p>
-                            All data in your DuckLake catalog is queryable via
-                            SQL. DuckDB's fast analytical engine handles joins,
-                            aggregations, and window functions. Export as JSON,
-                            CSV, or Parquet.
+                            Built-in marimo notebooks for data exploration and
+                            analysis. Python, SQL, and visualizations in one
+                            place. Docker-isolated execution with resource
+                            controls. Perfect for data teams without DevOps
+                            overhead.
                         </p>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="architecture" id="architecture">
-            <div class="container">
-                <h2 class="section-title">What's Under the Hood</h2>
-                <div class="arch-grid">
-                    <div class="arch-item">DuckDB - Query Engine</div>
-                    <div class="arch-item">DuckLake - Catalog</div>
-                    <div class="arch-item">Streaming</div>
-                    <div class="arch-item">Local & Cloud Storage</div>
                 </div>
             </div>
         </section>
@@ -605,19 +610,19 @@
                 <div class="perf-grid">
                     <div class="perf-card">
                         <div class="perf-number">$0</div>
-                        <div class="perf-label">Monthly cloud fees</div>
+                        <div class="perf-label">Per-query charges</div>
                     </div>
                     <div class="perf-card">
                         <div class="perf-number">&lt;100ms</div>
-                        <div class="perf-label">Typical query latency</div>
+                        <div class="perf-label">Million-row queries</div>
                     </div>
                     <div class="perf-card">
                         <div class="perf-number">100K+</div>
                         <div class="perf-label">Records/sec streaming</div>
                     </div>
                     <div class="perf-card">
-                        <div class="perf-number">5 min</div>
-                        <div class="perf-label">From zero to deployed</div>
+                        <div class="perf-number">Minutes</div>
+                        <div class="perf-label">To deploy & configure</div>
                     </div>
                 </div>
             </div>
@@ -625,52 +630,55 @@
 
         <section class="use-cases">
             <div class="container">
-                <h2 class="section-title">Built For Real Workloads</h2>
+                <h2 class="section-title">Built For</h2>
                 <div class="use-cases-grid">
                     <div class="use-case">
-                        <h3>SaaS Analytics Backend</h3>
+                        <h3>When You Need Your Data to Stay Put</h3>
                         <ul>
                             <li>
-                                Give each customer their own tenant with
-                                isolated catalog
+                                Deploy in your own cloud - data never leaves
+                                your VPC
                             </li>
-                            <li>Upload datasets via API, query with SQL</li>
-                            <li>Parquet storage for fast columnar queries</li>
-                            <li>No per-query SaaS fees eating your margins</li>
+                            <li>
+                                Each customer gets their own isolated catalog
+                            </li>
+                            <li>No data egress fees to cloud providers</li>
+                            <li>Simple API key authentication per account</li>
                         </ul>
                     </div>
                     <div class="use-case">
-                        <h3>Metrics & Telemetry</h3>
+                        <h3>When You Want Predictable Costs</h3>
                         <ul>
-                            <li>Stream Prometheus remote write data</li>
                             <li>
-                                Arrow IPC streaming for high-throughput
-                                ingestion
+                                Fixed infrastructure costs - know what you'll
+                                pay
                             </li>
                             <li>
-                                Store time-series data in Parquet for efficient
-                                queries
+                                No surprise charges from customer query spikes
                             </li>
                             <li>
-                                Query your metrics with SQL instead of PromQL
+                                Query gigabytes in milliseconds on a single
+                                server
+                            </li>
+                            <li>
+                                CSV/Parquet files auto-convert and become
+                                queryable
                             </li>
                         </ul>
                     </div>
                     <div class="use-case">
-                        <h3>Data Teams Without the Overhead</h3>
+                        <h3>When You Need Multi-Tenant That Actually Works</h3>
                         <ul>
+                            <li>Give each customer their own DuckDB catalog</li>
                             <li>
-                                CSV/JSON to Parquet conversion handled
-                                automatically
-                            </li>
-                            <li>DuckDB queries run at single-machine speeds</li>
-                            <li>
-                                SQLite catalog for simple deployments, Postgres
-                                for scale
+                                Upload files via API, query with SQL immediately
                             </li>
                             <li>
-                                When you need a warehouse today, not an
-                                enterprise project
+                                Built-in marimo notebooks for data exploration
+                            </li>
+                            <li>
+                                Start with SQLite, scale to PostgreSQL when
+                                ready
                             </li>
                         </ul>
                     </div>
@@ -680,92 +688,14 @@
 
         <section class="cta-section">
             <div class="container">
-                <h2>Self-Host Your Analytics</h2>
+                <h2>Ready to Own Your Analytics Stack?</h2>
                 <p>
-                    Python package or Docker image. SQLite for quick start,
-                    Postgres for production. Local storage now, S3 coming soon.
-                    Own your data warehouse.
+                    Deploy DuckPond to your AWS, GCP, or Azure in hours. Start
+                    with 10 tenants for free, scale to hundreds on a single
+                    server. Predictable costs, complete control, no vendor
+                    lock-in.
                 </p>
-                <div class="hero-buttons">
-                    <a
-                        href="#"
-                        class="button-primary"
-                        style="
-                            background: var(--primary-yellow);
-                            color: var(--text-dark);
-                        "
-                        >Quick Start Guide</a
-                    >
-                    <a href="#" class="button-secondary">View on GitHub</a>
-                </div>
             </div>
         </section>
-
-        <footer>
-            <div class="container">
-                <div class="footer-content">
-                    <div class="footer-section">
-                        <h4>Documentation</h4>
-                        <ul>
-                            <li><a href="#">Getting Started</a></li>
-                            <li><a href="#">API Reference</a></li>
-                            <li><a href="#">CLI Guide</a></li>
-                            <li><a href="#">Configuration</a></li>
-                        </ul>
-                    </div>
-                    <div class="footer-section">
-                        <h4>Resources</h4>
-                        <ul>
-                            <li><a href="#">Examples</a></li>
-                            <li><a href="#">Architecture</a></li>
-                            <li><a href="#">Performance</a></li>
-                            <li><a href="#">Best Practices</a></li>
-                        </ul>
-                    </div>
-                    <div class="footer-section">
-                        <h4>Community</h4>
-                        <ul>
-                            <li>
-                                <a
-                                    href="https://github.com/yourusername/duckpond-py"
-                                    >GitHub</a
-                                >
-                            </li>
-                            <li><a href="#">Contributing</a></li>
-                            <li><a href="#">Issue Tracker</a></li>
-                        </ul>
-                    </div>
-                    <div class="footer-section">
-                        <h4>Related</h4>
-                        <ul>
-                            <li>
-                                <a href="https://duckdb.org" target="_blank"
-                                    >DuckDB</a
-                                >
-                            </li>
-                            <li>
-                                <a href="https://motherduck.com" target="_blank"
-                                    >MotherDuck</a
-                                >
-                            </li>
-                            <li>
-                                <a
-                                    href="https://arrow.apache.org"
-                                    target="_blank"
-                                    >Apache Arrow</a
-                                >
-                            </li>
-                            <li><a href="#">MIT License</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="footer-bottom">
-                    <p>
-                        © 2025 DuckPond • Version 25.1 • Built with DuckDB •
-                        MIT License
-                    </p>
-                </div>
-            </div>
-        </footer>
     </body>
 </html>
