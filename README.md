@@ -1,91 +1,300 @@
 # DuckPond
 
-A self-hosted data warehouse for teams who need fast analytics without the enterprise overhead. Upload files, stream metrics, and query with SQL using DuckDB's columnar engine.
+A self-hosted multi-account data platform with DuckDB analytics and interactive marimo notebooks. Run your own analytics infrastructure without cloud vendor lock-in.
 
 ## What it does
 
-DuckPond is a multi-account analytics platform you run on your own infrastructure:
+DuckPond is a complete analytics platform you run on your own infrastructure:
 
-- Upload CSV, JSON, or Parquet files that get auto-converted to efficient Parquet storage
-- Stream data using Arrow IPC or Prometheus remote write protocol
-- Query everything with SQL through DuckDB's fast analytical engine
-- Give each customer their own isolated account with a DuckLake catalog
-- No cloud fees, no vendor lock-in, no per-query billing
+- **Interactive Notebooks** - Create and run marimo notebooks with Python, SQL, and data visualization
+- **Multi-Account Isolation** - Each account gets its own DuckLake catalog, storage, and API keys
+- **File Uploads** - Upload CSV, JSON, or Parquet files with automatic Parquet conversion
+- **Streaming Ingestion** - Stream data using Arrow IPC or Prometheus remote write protocol
+- **SQL Analytics** - Query everything with DuckDB's fast columnar engine
+- **Web Interface** - Simple & Modern UI for managing notebooks, accounts, and API keys
+- **Docker Isolation** - Notebooks run in isolated Docker containers with resource limits
 
-Think of it as the data warehouse you'd build yourself if you had time, but without spending six months on it.
+Think of it as Jupyter + DuckDB + multi-tenancy in a self-hosted package.
 
 ## Why use this
 
 You should consider DuckPond if:
 
-- You're building SaaS analytics and don't want Snowflake bills eating your margins
-- You have gigabytes of data, not petabytes, and distributed systems seem excessive
-- You want multi-account isolation without configuring complex RBAC systems
+- You want interactive notebooks for data analysis without JupyterHub complexity
+- You're building analytics and need account isolation
+- You have gigabytes of data, not petabytes, and prefer simplicity
 - You need to store Prometheus metrics longer than two weeks
-- You prefer owning your infrastructure over monthly SaaS subscriptions
+- You want to own your infrastructure and avoid per-query cloud billing
+- You prefer Python and SQL over proprietary query languages
 
+## Key Features
 
-## How it works
+### Interactive Notebooks
+- Run marimo notebooks with full Python and SQL support
+- Start/stop notebook sessions on demand
+- Docker-isolated execution with memory and CPU limits
+- Built-in DuckDB integration for querying your data
 
+### Multi-Account System
 Each account gets:
-- Their own DuckLake catalog stored in SQLite (or PostgreSQL for production)
-- Isolated storage path for Parquet files
-- API keys for authentication
+- Isolated DuckLake catalog (SQLite or PostgreSQL backed)
+- Separate storage path for Parquet files
 - Configurable storage quotas
+- Independent resource limits
 
-When you upload files:
-1. Files are validated and converted to Parquet format
-2. Parquet files are stored in the account's storage path
-3. Tables are registered in the account's DuckLake catalog
-4. Data becomes queryable immediately via SQL
+### Data Ingestion
+- **File Upload**: CSV, JSON, Parquet with auto-conversion
+- **Arrow IPC**: Streaming tabular data via Arrow protocol
+- **Prometheus**: Remote write protocol for metrics storage
+- **Validation**: Schema validation and size limits
+- **Catalogs**: Automatic table registration in DuckLake
 
-When you run queries:
-1. DuckDB loads the Parquet files from the catalog
-2. Queries run in-process using columnar execution
-3. Results export as JSON, CSV, or Parquet
+### Analytics
+- **DuckDB**: Fast columnar query execution
+- **SQL**: Full SQL support with DuckDB extensions
+- **Formats**: Export results as JSON, CSV, or Parquet
+- **Performance**: Million-row queries in under 100ms
+
+### Web Interface
+- Notebook management (create, start, stop, delete)
 
 ## Architecture
 
-Built with:
-- FastAPI for the REST API
-- DuckDB for query execution
-- DuckLake for ACID-compliant catalogs
-- PyArrow for streaming and zero-copy operations
-- SQLite or PostgreSQL for metadata
-- Local filesystem for storage (S3 support planned)
+### Core Stack
+- **FastAPI** - REST API and WebSocket support
+- **DuckDB** - Columnar analytical query engine
+- **DuckLake** - ACID-compliant table catalogs
+- **Marimo** - Interactive notebook environment
+- **Docker** - Notebook container isolation
+- **SQLAlchemy** - Database ORM for metadata
+- **PyArrow** - Zero-copy data operations
 
+### Storage
+- **Metadata**: SQLite (development) or PostgreSQL (production)
+- **Data**: Local filesystem with Parquet format
+- **Notebooks**: Per-account `.py` files
+- **S3**: Configuration exists, implementation in progress
 
-## Performance expectations
+### Notebook Infrastructure
+- **Process Manager**: Async lifecycle management
+- **Health Checks**: HTTP readiness probes
+- **Port Allocation**: Dynamic port pool (10000-10099)
+- **Resource Limits**: Configurable memory and CPU caps
+- **Session Cleanup**: Automatic idle session termination
 
-On typical hardware (Macbook Air M1):
-- Query latency: under 100ms for million-row tables
-- Streaming ingestion: 100K+ records per second
-- CSV to Parquet: around 50MB per second
+## Performance
+
+On my hardware (MacBook Air M1):
+- Query latency: <100ms for million-row tables
+- Streaming ingestion: 100K+ records/second
+- CSV to Parquet: ~50MB/second
 - Concurrent queries: 100+ per instance
+- Notebook startup: 3-5 seconds
 
-These are single-machine numbers. No cluster required.
+Single-machine performance. No cluster required.
 
-## Current status
+## Installation
 
-Version 25.1 - Active development
+### Prerequisites
+- Python 3.13+
+- Docker (for notebook execution)
+- PostgreSQL (optional, for production)
 
-What works now:
-- Multi-account system with isolated catalogs
-- File uploads with auto-conversion to Parquet
-- Arrow IPC and Prometheus streaming
-- SQL queries via DuckDB
-- Local filesystem storage
-- SQLite and PostgreSQL metadata
+### Quick Start
 
-Coming soon:
-- S3-compatible storage backend
+1. **Clone and Install from Source**
+```bash
+git clone https://github.com/yourusername/duckpond-py.git
+cd duckpond-py
+pip install -e .
+
+# Or using uv (faster):
+uv pip install -e .
+```
+
+2. **Initialize Configuration**
+```bash
+duckpond init
+# Creates ~/.duckpond/config.yaml
+```
+
+3. **Initialize Database**
+```bash
+duckpond db upgrade
+```
+
+4. **Create an Account**
+```bash
+duckpond account create myaccount
+# Returns API key
+```
+
+5. **Start Server**
+```bash
+duckpond api serve
+# Listens on http://localhost:8000
+```
+
+6. **Access Web Interface**
+Open http://localhost:8000 and log in with your API key.
+
+## Configuration
+
+Example `~/.duckpond/config.yaml`:
+
+```yaml
+server:
+  host: 0.0.0.0
+  port: 8000
+  workers: 4
+
+database:
+  url: postgresql://user:pass@localhost/duckpond
+  # or: sqlite:///~/.duckpond/metadata.db
+
+storage:
+  default_backend: local
+  local_path: ~/.duckpond/data
+
+duckdb:
+  memory_limit: 4GB
+  threads: 4
+
+notebooks:
+  docker_image: python:3.12-slim
+  memory_limit_mb: 2048
+  cpu_limit: 2.0
+  session_timeout_seconds: 3600
+  health_check_interval_seconds: 30
+
+limits:
+  max_file_size_mb: 500
+  default_max_storage_gb: 10
+  default_max_concurrent_queries: 5
+```
+
+## CLI Usage
+
+### Account Management
+```bash
+# Create account
+duckpond account create myaccount
+
+# List accounts
+duckpond account list
+
+# Generate API key
+duckpond account api-key create myaccount
+```
+
+### Dataset Operations
+```bash
+# Upload file
+duckpond dataset upload mydata.csv --account myaccount
+
+# List datasets
+duckpond dataset list --account myaccount
+
+# Query dataset
+duckpond query "SELECT * FROM mydata LIMIT 10" --account myaccount
+```
+
+### Streaming
+```bash
+# Stream Arrow IPC data
+cat data.arrow | duckpond stream arrow mytable --account myaccount
+
+# Test Prometheus endpoint
+duckpond stream prometheus-test --account myaccount
+```
+
+## API Usage
+
+### Authentication
+All API requests require an API key:
+```bash
+curl -H "X-API-Key: your-key-here" http://localhost:8000/api/query
+```
+
+## Development
+
+### Setup
+```bash
+# Clone repository
+git clone https://github.com/yourusername/duckpond.git
+cd duckpond
+
+# Or using uv (recommended - faster):
+uv pip install -e . --group dev
+
+# Run tests
+uv run pytest
+
+# Run linter
+ruff check .
+
+# Format code
+ruff format .
+```
+
+### Project Structure
+```
+duckpond/
+├── accounts/          # Account management and authentication
+├── api/              # FastAPI application and routers
+├── catalog/          # DuckLake catalog integration
+├── cli/              # Command-line interface
+├── conversion/       # File format conversion (CSV→Parquet)
+├── db/               # SQLAlchemy models and migrations
+├── ingest/           # File upload and validation
+├── notebooks/        # Marimo notebook management
+│   ├── manager.py    # Session lifecycle
+│   ├── process.py    # Docker container management
+│   ├── proxy.py      # WebSocket proxy
+│   └── session.py    # Session state tracking
+├── query/            # DuckDB query execution
+├── static/           # Frontend assets
+│   ├── css/          # Stylesheets
+│   └── js/           # JavaScript (components, views, utils)
+├── storage/          # Storage backend abstraction
+├── streaming/        # Arrow IPC and Prometheus ingestion
+├── templates/        # HTML templates
+└── wal/              # Write-ahead log for streaming
+```
+
+## Current Status
+
+**Version**: 25.1 - Active Development
+
+### ✅ Production Ready
+- Multi-account system with API key authentication
+- File upload with Parquet conversion
+- SQL query execution via DuckDB
+- Arrow IPC streaming
+- Prometheus remote write ingestion
+- Notebook creation and management
+- Session lifecycle (start/stop/monitor)
+- Docker-isolated notebook execution
+- Web UI for notebooks and settings
+- CLI tools for all operations
+- PostgreSQL and SQLite metadata storage
+
+### 🚧 In Progress
+- S3-compatible storage backend (configuration exists, needs testing)
+
+### 📋 Planned
 - Arrow Flight SQL interface
-- Web-based query interface
 
-## License
+## Acknowledgments
 
-MIT License
+- **DuckDB** - Fast analytical query engine
+- **Marimo** - Modern notebook environment
+- **FastAPI** - High-performance web framework
+- **PyArrow** - Efficient columnar data structures
 
-## Contributing
+## Support
 
-Pull requests welcome. Please include tests for new features.
+- **Issues**: https://github.com/wundervaflja/duckpond/issues
+- **Discussions**: https://github.com/wundervaflja/duckpond/discussions
+
+---

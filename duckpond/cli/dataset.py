@@ -28,7 +28,7 @@ logger = get_logger(__name__)
 
 @app.command()
 def list(
-    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
+    account: str = typer.Option(..., "--account", "-a", help="Account ID"),
 ) -> None:
     """List all datasets for a account (both files in storage and tables in catalog)."""
 
@@ -80,23 +80,17 @@ def list(
                         storage_datasets[dataset_name]["files"].append(file_path)
 
                         try:
-                            file_size = await storage_backend.get_file_size(
-                                file_path, account
-                            )
+                            file_size = await storage_backend.get_file_size(file_path, account)
                             storage_datasets[dataset_name]["total_size"] += file_size
                         except Exception:
-                            logger.error(
-                                f"Can't get file size for {tenant} - {file_path}"
-                            )
+                            logger.error(f"Can't get file size for {tenant} - {file_path}")
 
             all_datasets = {}
 
             for name, ds in catalog_datasets.items():
                 all_datasets[name] = {
                     "name": name,
-                    "type": ds.type.value
-                    if hasattr(ds.type, "value")
-                    else str(ds.type),
+                    "type": ds.type.value if hasattr(ds.type, "value") else str(ds.type),
                     "format": ds.format.value
                     if ds.format and hasattr(ds.format, "value")
                     else (ds.format or "—"),
@@ -176,7 +170,7 @@ def list(
 @app.command()
 def get(
     dataset_name: str = typer.Argument(..., help="Dataset name"),
-    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
+    account: str = typer.Option(..., "--account", "-a", help="Account ID"),
 ) -> None:
     """Get detailed information about a dataset."""
 
@@ -209,9 +203,7 @@ def get(
                 else (metadata.format or "—"),
                 "Location": metadata.location or "—",
                 "Row Count": f"{metadata.row_count:,}" if metadata.row_count else "—",
-                "Size": _format_size(metadata.size_bytes)
-                if metadata.size_bytes
-                else "—",
+                "Size": _format_size(metadata.size_bytes) if metadata.size_bytes else "—",
                 "Created": metadata.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 if metadata.created_at
                 else "—",
@@ -254,7 +246,7 @@ def get(
 @app.command()
 def delete(
     dataset_name: str = typer.Argument(..., help="Dataset name"),
-    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
+    account: str = typer.Option(..., "--account", "-a", help="Account ID"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ) -> None:
     """Delete a dataset."""
@@ -302,7 +294,7 @@ def upload(
         dir_okay=False,
         readable=True,
     ),
-    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
+    account: str = typer.Option(..., "--account", "-a", help="Account ID"),
     catalog: bool = typer.Option(False, "--catalog", "-c", help="Register in catalog"),
 ) -> None:
     """Upload a file (CSV or Parquet) with optional catalog registration."""
@@ -361,7 +353,8 @@ def upload(
                 result = await storage_backend.upload_file(
                     local_path=file_path,
                     remote_key=remote_key,
-                    account_id=account,                     metadata={
+                    account_id=account,
+                    metadata={
                         "original_filename": file_path.name,
                         "dataset_name": dataset_name,
                         "uploaded_at": datetime.now(UTC).isoformat(),
@@ -378,25 +371,17 @@ def upload(
                     metrics = result["metrics"]
                     print_info("\n📊 Conversion Metrics:")
                     print_info(f"  Rows: {metrics['row_count']:,}")
-                    print_info(
-                        f"  Source size: {format_size(metrics['source_size_bytes'])}"
-                    )
-                    print_info(
-                        f"  Parquet size: {format_size(metrics['dest_size_bytes'])}"
-                    )
+                    print_info(f"  Source size: {format_size(metrics['source_size_bytes'])}")
+                    print_info(f"  Parquet size: {format_size(metrics['dest_size_bytes'])}")
                     print_info(f"  Compression: {metrics['compression_ratio']:.2%}")
                     print_info(f"  Duration: {metrics['duration_seconds']:.2f}s")
                     print_info(f"  Throughput: {metrics['throughput_mbps']:.2f} MB/s")
                     print_info(f"  Schema fingerprint: {metrics['schema_fingerprint']}")
 
                 if catalog:
-                    catalog_manager = await create_catalog_manager(
-                        account, settings=settings
-                    )
+                    catalog_manager = await create_catalog_manager(account, settings=settings)
 
-                    result_path = (
-                        result["remote_path"] if isinstance(result, dict) else result
-                    )
+                    result_path = result["remote_path"] if isinstance(result, dict) else result
 
                     if settings.default_storage_backend == "local":
                         storage_path = Path(settings.local_storage_path) / "accounts"
@@ -424,7 +409,7 @@ def upload(
                 else:
                     print_info("File uploaded but not registered in catalog")
                     print_info(
-                        f"To register later, use: duckpond dataset upload {dataset_name} {file_path} -t {account} --catalog"
+                        f"To register later, use: duckpond dataset upload {dataset_name} {file_path} -a {account} --catalog"
                     )
 
             finally:
@@ -440,10 +425,8 @@ def upload(
 
 @app.command()
 def register(
-    dataset_name: str = typer.Argument(
-        ..., help="Dataset name from storage to register"
-    ),
-    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
+    dataset_name: str = typer.Argument(..., help="Dataset name from storage to register"),
+    account: str = typer.Option(..., "--account", "-a", help="Account ID"),
     catalog: str = typer.Option("default", "--catalog", "-c", help="Catalog name"),
 ) -> None:
     """Register a dataset from storage as a view in the catalog.
@@ -454,9 +437,9 @@ def register(
     If multiple Parquet files exist for the dataset, they will all be included in the view.
 
     Examples:
-        duckpond dataset register wines_info -t test
+        duckpond dataset register wines_info -a test
 
-        duckpond dataset register wines_ducklake -t test -c default
+        duckpond dataset register wines_ducklake -a test -c default
     """
 
     async def _register() -> None:
@@ -484,12 +467,8 @@ def register(
             parquet_files = [f for f in tables_files if f.endswith(".parquet")]
 
             if not parquet_files:
-                print_error(
-                    f"No Parquet files found for dataset '{dataset_name}' in storage"
-                )
-                print_info(
-                    f"Use 'duckpond dataset list -t {account}' to see available datasets"
-                )
+                print_error(f"No Parquet files found for dataset '{dataset_name}' in storage")
+                print_info(f"Use 'duckpond dataset list -a {account}' to see available datasets")
                 raise typer.Exit(1)
 
             print_info(f"Found {len(parquet_files)} Parquet file(s)")
@@ -497,10 +476,7 @@ def register(
             if len(parquet_files) == 1:
                 file_path = str(
                     (
-                        Path(settings.local_storage_path)
-                        / "accounts"
-                        / account
-                        / parquet_files[0]
+                        Path(settings.local_storage_path) / "accounts" / account / parquet_files[0]
                     ).absolute()
                 )
             else:
@@ -526,7 +502,7 @@ def register(
 
             print_success(f"Registered '{dataset_name}' as view in catalog '{catalog}'")
             print_info(
-                f"You can now query it with: duckpond query execute -t {account} -c {catalog} -s 'SELECT * FROM \"{catalog}\".{dataset_name}'"
+                f"You can now query it with: duckpond query execute -a {account} -c {catalog} -s 'SELECT * FROM \"{catalog}\".{dataset_name}'"
             )
 
         except Exception as e:
@@ -540,7 +516,7 @@ def register(
 @app.command()
 def snapshots(
     dataset_name: str = typer.Argument(..., help="Dataset name"),
-    account: str = typer.Option(..., "--account", "-t", help="Account ID"),
+    account: str = typer.Option(..., "--account", "-a", help="Account ID"),
 ) -> None:
     """List all snapshots for a dataset."""
 
