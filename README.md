@@ -97,45 +97,53 @@ Single-machine performance. No cluster required.
 
 ### Prerequisites
 - Python 3.13+
-- Docker (for notebook execution)
-- PostgreSQL (optional, for production)
+- Docker (required for notebook and query execution)
+- PostgreSQL (optional, for production metadata storage)
 
 ### Quick Start
 
-1. **Clone and Install from Source**
+1. **Build Docker Image**
 ```bash
 git clone https://github.com/yourusername/duckpond-py.git
 cd duckpond-py
+
+# Build the DuckPond Docker image (required for notebooks and queries)
+docker build -t duckpond:25.1 .
+```
+
+2. **Install Python Package**
+```bash
+# Using pip:
 pip install -e .
 
-# Or using uv (faster):
+# Or using uv (recommended - faster):
 uv pip install -e .
 ```
 
-2. **Initialize Configuration**
+3. **Initialize Configuration**
 ```bash
 duckpond init
 # Creates ~/.duckpond/config.yaml
 ```
 
-3. **Initialize Database**
+4. **Initialize Database**
 ```bash
 duckpond db upgrade
 ```
 
-4. **Create an Account**
+5. **Create an Account**
 ```bash
 duckpond account create myaccount
 # Returns API key
 ```
 
-5. **Start Server**
+6. **Start Server**
 ```bash
 duckpond api serve
 # Listens on http://localhost:8000
 ```
 
-6. **Access Web Interface**
+7. **Access Web Interface**
 Open http://localhost:8000 and log in with your API key.
 
 ## Configuration
@@ -161,11 +169,17 @@ duckdb:
   threads: 4
 
 notebooks:
-  docker_image: python:3.12-slim
+  docker_image: duckpond:25.1
   memory_limit_mb: 2048
   cpu_limit: 2.0
   session_timeout_seconds: 3600
   health_check_interval_seconds: 30
+
+query:
+  docker_image: duckpond:25.1
+  memory_limit_mb: 4096
+  cpu_limit: 2.0
+  default_timeout_seconds: 30
 
 limits:
   max_file_size_mb: 500
@@ -195,8 +209,17 @@ duckpond dataset upload mydata.csv --account myaccount
 # List datasets
 duckpond dataset list --account myaccount
 
-# Query dataset
-duckpond query "SELECT * FROM mydata LIMIT 10" --account myaccount
+# Query dataset (local execution)
+duckpond query execute --account myaccount --sql "SELECT * FROM catalog.mydata LIMIT 10"
+
+# Query dataset (Docker isolated execution)
+duckpond query execute --account myaccount --sql "SELECT * FROM catalog.mydata" --docker
+
+# Query with output format
+duckpond query execute --account myaccount --sql "SELECT * FROM catalog.mydata" --output json
+
+# Query with export to file
+duckpond query execute --account myaccount --sql "SELECT * FROM catalog.mydata" --export results.json
 ```
 
 ### Streaming
@@ -246,16 +269,25 @@ duckpond/
 ├── cli/              # Command-line interface
 ├── conversion/       # File format conversion (CSV→Parquet)
 ├── db/               # SQLAlchemy models and migrations
+├── docker/           # Docker container infrastructure
+│   ├── config.py     # Container configuration
+│   ├── container.py  # Generic Docker container wrapper
+│   ├── exceptions.py # Container-specific exceptions
+│   └── runners/      # Specialized container runners
+│       ├── marimo.py # Marimo notebook runner
 ├── ingest/           # File upload and validation
 ├── notebooks/        # Marimo notebook management
 │   ├── manager.py    # Session lifecycle
-│   ├── process.py    # Docker container management
+│   ├── process.py    # Marimo container process wrapper
 │   ├── proxy.py      # WebSocket proxy
 │   └── session.py    # Session state tracking
 ├── query/            # DuckDB query execution
+│   ├── docker_executor.py  # Docker-based query executor
+│   ├── executor.py         # Local query executor
+│   └── pool.py            # Connection pooling
 ├── static/           # Frontend assets
 │   ├── css/          # Stylesheets
-│   └── js/           # JavaScript (components, views, utils)
+│   └── js/           # JavaScript (components, views, util)
 ├── storage/          # Storage backend abstraction
 ├── streaming/        # Arrow IPC and Prometheus ingestion
 ├── templates/        # HTML templates
