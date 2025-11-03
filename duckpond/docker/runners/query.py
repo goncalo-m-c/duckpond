@@ -334,9 +334,10 @@ class QueryRunner:
                 row_count = len(stdout.strip().split("\n")) - 1 if stdout.strip() else 0
             elif output_format == "arrow":
                 # Convert JSON to Arrow table
-                import pyarrow as pa
                 import base64
                 from io import BytesIO
+
+                import pyarrow as pa
 
                 json_data = json.loads(stdout)
                 # Convert to Arrow table then to base64 IPC stream

@@ -8,16 +8,16 @@ import logging
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 import pyarrow.ipc as ipc
 
-from duckpond.streaming.prometheus.converter import PrometheusToArrowConverter
-from duckpond.streaming.prometheus.protocol import PrometheusRemoteWrite
+from duckpond.catalog.manager import DuckLakeCatalogManager
 from duckpond.streaming.buffer_manager import BufferManager
 from duckpond.streaming.ingestor import StreamingIngestor
-from duckpond.catalog.manager import DuckLakeCatalogManager
+from duckpond.streaming.prometheus.converter import PrometheusToArrowConverter
+from duckpond.streaming.prometheus.protocol import PrometheusRemoteWrite
 
 logger = logging.getLogger(__name__)
 
@@ -160,8 +160,7 @@ class PrometheusStreamingIngestor:
         total_arrow_bytes = sum(b.nbytes for b in batches)
 
         logger.info(
-            f"Generated {len(batches)} batches: "
-            f"{total_rows} rows, {total_arrow_bytes:,} bytes"
+            f"Generated {len(batches)} batches: {total_rows} rows, {total_arrow_bytes:,} bytes"
         )
 
         with tempfile.NamedTemporaryFile(
@@ -291,8 +290,7 @@ class PrometheusStreamingIngestor:
         start_time = datetime.now(timezone.utc)
 
         logger.info(
-            f"Starting direct Prometheus ingestion: account={account_id}, "
-            f"dataset={dataset_name}"
+            f"Starting direct Prometheus ingestion: account={account_id}, dataset={dataset_name}"
         )
 
         write_request = self.protocol.decode_write_request(compressed_data)
@@ -324,8 +322,7 @@ class PrometheusStreamingIngestor:
         total_bytes = sum(b.nbytes for b in batches)
 
         logger.info(
-            f"Direct ingestion complete: {len(batches)} batches, "
-            f"{total_rows} rows, {duration:.2f}s"
+            f"Direct ingestion complete: {len(batches)} batches, {total_rows} rows, {duration:.2f}s"
         )
 
         return {

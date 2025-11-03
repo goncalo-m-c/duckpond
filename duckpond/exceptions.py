@@ -49,9 +49,7 @@ class AccountAlreadyExistsError(AccountError):
 class QuotaExceededError(AccountError):
     """Account quota exceeded."""
 
-    def __init__(
-        self, account_id: str, quota_type: str, limit: Any, current: Any
-    ) -> None:
+    def __init__(self, account_id: str, quota_type: str, limit: Any, current: Any) -> None:
         super().__init__(
             f"Quota exceeded for {quota_type}: {current}/{limit}",
             account_id=account_id,
@@ -121,9 +119,7 @@ class QueryTimeoutError(QueryError):
     """Query execution timeout."""
 
     def __init__(self, timeout_seconds: int) -> None:
-        super().__init__(
-            f"Query timeout after {timeout_seconds}s", timeout_seconds=timeout_seconds
-        )
+        super().__init__(f"Query timeout after {timeout_seconds}s", timeout_seconds=timeout_seconds)
 
 
 class QueryMemoryLimitError(QueryError):

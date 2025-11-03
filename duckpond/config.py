@@ -90,26 +90,20 @@ def load_yaml_config(config_path: Path | None = None) -> dict[str, Any]:
             if "default_max_storage_gb" in limits:
                 flattened["default_max_storage_gb"] = limits["default_max_storage_gb"]
             if "default_max_query_memory_gb" in limits:
-                flattened["default_max_query_memory_gb"] = limits[
-                    "default_max_query_memory_gb"
-                ]
+                flattened["default_max_query_memory_gb"] = limits["default_max_query_memory_gb"]
             if "default_max_concurrent_queries" in limits:
                 flattened["default_max_concurrent_queries"] = limits[
                     "default_max_concurrent_queries"
                 ]
             if "api_key_cache_ttl_seconds" in limits:
-                flattened["api_key_cache_ttl_seconds"] = limits[
-                    "api_key_cache_ttl_seconds"
-                ]
+                flattened["api_key_cache_ttl_seconds"] = limits["api_key_cache_ttl_seconds"]
 
         if "streaming" in yaml_data:
             streaming = yaml_data["streaming"]
             if "buffer_size" in streaming:
                 flattened["stream_buffer_size"] = streaming["buffer_size"]
             if "flush_interval_seconds" in streaming:
-                flattened["stream_flush_interval_seconds"] = streaming[
-                    "flush_interval_seconds"
-                ]
+                flattened["stream_flush_interval_seconds"] = streaming["flush_interval_seconds"]
 
         if "upload" in yaml_data:
             upload = yaml_data["upload"]
@@ -184,9 +178,7 @@ class Settings(BaseSettings):
 
     duckpond_host: str = Field(default="0.0.0.0", description="Server bind address")
     duckpond_port: int = Field(default=8000, ge=1, le=65535, description="Server port")
-    duckpond_workers: int = Field(
-        default=4, ge=1, description="Number of worker processes"
-    )
+    duckpond_workers: int = Field(default=4, ge=1, description="Number of worker processes")
 
     metadata_db_url: str = Field(
         default="sqlite:///~/.duckpond/metadata.db",
@@ -230,9 +222,7 @@ class Settings(BaseSettings):
 
     catalog_enabled: bool = Field(default=True, description="Enable DuckLake catalog")
 
-    default_max_storage_gb: int = Field(
-        default=100, ge=1, description="Default storage quota"
-    )
+    default_max_storage_gb: int = Field(default=100, ge=1, description="Default storage quota")
     default_max_query_memory_gb: int = Field(
         default=4,
         ge=1,
@@ -249,9 +239,7 @@ class Settings(BaseSettings):
         description="API key cache TTL",
     )
 
-    max_file_size_mb: int = Field(
-        default=1000, ge=1, description="Max file upload size"
-    )
+    max_file_size_mb: int = Field(default=1000, ge=1, description="Max file upload size")
     temp_upload_dir: Path = Field(
         default=Path("/tmp/duckpond/uploads"),
         description="Temporary upload directory",
@@ -280,17 +268,13 @@ class Settings(BaseSettings):
 
     duckdb_memory_limit: str = Field(default="4GB", description="DuckDB memory limit")
     duckdb_threads: int = Field(default=4, ge=1, description="DuckDB thread count")
-    duckdb_pool_size: int = Field(
-        default=10, ge=1, description="DuckDB connection pool size"
-    )
+    duckdb_pool_size: int = Field(default=10, ge=1, description="DuckDB connection pool size")
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO",
         description="Logging level",
     )
-    log_format: Literal["json", "text"] = Field(
-        default="json", description="Log format"
-    )
+    log_format: Literal["json", "text"] = Field(default="json", description="Log format")
 
     notebook_session_timeout_seconds: int = Field(
         default=3600,
@@ -334,7 +318,7 @@ class Settings(BaseSettings):
         description="Interval for notebook process health checks",
     )
     notebook_docker_image: str = Field(
-        default="python:3.12-slim",
+        default="duckpond:25.1",
         description="Docker image to use for marimo containers",
     )
     notebook_cpu_limit: float = Field(

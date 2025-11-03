@@ -164,9 +164,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    async def get_file_metadata(
-        self, remote_key: str, account_id: str
-    ) -> dict[str, Any]:
+    async def get_file_metadata(self, remote_key: str, account_id: str) -> dict[str, Any]:
         """Get file metadata.
 
         Args:
@@ -308,15 +306,11 @@ class MockStorageBackend(StorageBackend):
 
         if convert_to_parquet and original_extension != ".parquet":
             if final_remote_key.endswith(original_extension):
-                final_remote_key = (
-                    final_remote_key[: -len(original_extension)] + ".parquet"
-                )
+                final_remote_key = final_remote_key[: -len(original_extension)] + ".parquet"
             elif "." not in final_remote_key:
                 final_remote_key = final_remote_key + ".parquet"
             else:
-                final_remote_key = (
-                    Path(final_remote_key).with_suffix(".parquet").as_posix()
-                )
+                final_remote_key = Path(final_remote_key).with_suffix(".parquet").as_posix()
 
         full_key = self._build_account_key(account_id, final_remote_key)
         print(f"full_key: {full_key}")
@@ -328,17 +322,13 @@ class MockStorageBackend(StorageBackend):
             "content_type": "application/octet-stream",
             "original_filename": local_path.name,
             "original_extension": original_extension,
-            "converted_to_parquet": str(
-                convert_to_parquet and original_extension != ".parquet"
-            ),
+            "converted_to_parquet": str(convert_to_parquet and original_extension != ".parquet"),
             **(metadata or {}),
         }
 
         return full_key
 
-    async def download_file(
-        self, remote_key: str, local_path: Path, account_id: str
-    ) -> None:
+    async def download_file(self, remote_key: str, local_path: Path, account_id: str) -> None:
         """Download file from mock storage."""
         from duckpond.exceptions import FileNotFoundError as DuckPondFileNotFoundError
 
@@ -374,9 +364,7 @@ class MockStorageBackend(StorageBackend):
 
         return len(keys_to_delete)
 
-    async def list_files(
-        self, prefix: str, account_id: str, recursive: bool = True
-    ) -> list[str]:
+    async def list_files(self, prefix: str, account_id: str, recursive: bool = True) -> list[str]:
         """List files in mock storage."""
         full_prefix = self._build_account_key(account_id, prefix)
         matching_files = []
@@ -409,9 +397,7 @@ class MockStorageBackend(StorageBackend):
 
         return len(self._files[full_key])
 
-    async def get_file_metadata(
-        self, remote_key: str, account_id: str
-    ) -> dict[str, Any]:
+    async def get_file_metadata(self, remote_key: str, account_id: str) -> dict[str, Any]:
         """Get file metadata from mock storage."""
         from duckpond.exceptions import FileNotFoundError as DuckPondFileNotFoundError
 

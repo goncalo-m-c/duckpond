@@ -140,6 +140,7 @@ def handle_error(error: Exception) -> None:
 
 try:
     from duckpond.cli import (
+        account,
         api,
         config,
         dataset,
@@ -147,7 +148,6 @@ try:
         init,
         query,
         stream,
-        account,
     )
 
     app.add_typer(init.app, name="init", help="Initialize DuckPond application")

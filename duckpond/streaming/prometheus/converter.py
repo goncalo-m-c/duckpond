@@ -5,8 +5,8 @@ for efficient streaming ingestion into DuckDB/Parquet.
 """
 
 import logging
-from typing import List, Dict, Set, Any, Optional
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Set
 
 import pyarrow as pa
 
@@ -170,8 +170,7 @@ class PrometheusToArrowConverter:
             raise ValueError("Cannot convert empty time series")
 
         logger.debug(
-            f"Converting {len(time_series)} time series to RecordBatch with "
-            f"{len(schema)} columns"
+            f"Converting {len(time_series)} time series to RecordBatch with {len(schema)} columns"
         )
 
         columns = {}
@@ -222,13 +221,9 @@ class PrometheusToArrowConverter:
                 [ts.get("metric_type") for ts in time_series], type=pa.string()
             )
         if "help" in schema.names:
-            columns["help"] = pa.array(
-                [ts.get("help") for ts in time_series], type=pa.string()
-            )
+            columns["help"] = pa.array([ts.get("help") for ts in time_series], type=pa.string())
         if "unit" in schema.names:
-            columns["unit"] = pa.array(
-                [ts.get("unit") for ts in time_series], type=pa.string()
-            )
+            columns["unit"] = pa.array([ts.get("unit") for ts in time_series], type=pa.string())
 
         arrays = [columns[field.name] for field in schema]
         batch = pa.record_batch(arrays, schema=schema)
@@ -281,8 +276,7 @@ class PrometheusToArrowConverter:
             ...     await ingest_batch(batch)
         """
         logger.info(
-            f"Converting Prometheus write request "
-            f"({len(compressed_data)} bytes compressed)"
+            f"Converting Prometheus write request ({len(compressed_data)} bytes compressed)"
         )
 
         write_request = self._protocol.decode_write_request(compressed_data)
@@ -357,8 +351,7 @@ class PrometheusToArrowConverter:
             ... )
         """
         logger.info(
-            f"Converting Prometheus write request "
-            f"({len(compressed_data)} bytes compressed)"
+            f"Converting Prometheus write request ({len(compressed_data)} bytes compressed)"
         )
 
         write_request = self._protocol.decode_write_request(compressed_data)
@@ -428,12 +421,8 @@ class PrometheusToArrowConverter:
             ValueError: If no sample data provided and schema cannot be determined
         """
         if sample_data:
-            metric_data = [
-                ts for ts in sample_data if ts.get("__name__") == metric_name
-            ]
+            metric_data = [ts for ts in sample_data if ts.get("__name__") == metric_name]
             if metric_data:
                 return self.infer_schema(metric_data)
 
-        raise ValueError(
-            f"Cannot determine schema for metric '{metric_name}': no sample data"
-        )
+        raise ValueError(f"Cannot determine schema for metric '{metric_name}': no sample data")

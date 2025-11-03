@@ -5,10 +5,10 @@ remote write protocol, including Protobuf decoding, Snappy decompression,
 and conversion to Arrow/Parquet formats.
 """
 
-from duckpond.streaming.prometheus.protocol import PrometheusRemoteWrite
-from duckpond.streaming.prometheus.parser import PrometheusParser
 from duckpond.streaming.prometheus.converter import PrometheusToArrowConverter
 from duckpond.streaming.prometheus.ingestor import PrometheusStreamingIngestor
+from duckpond.streaming.prometheus.parser import PrometheusParser
+from duckpond.streaming.prometheus.protocol import PrometheusRemoteWrite
 
 __all__ = [
     "PrometheusRemoteWrite",

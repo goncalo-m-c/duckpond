@@ -5,11 +5,11 @@ from typing import Optional
 
 import structlog
 
+from duckpond.accounts.models import Account
 from duckpond.exceptions import StorageBackendError
 from duckpond.storage.backend import StorageBackend
 from duckpond.storage.local_backend import LocalBackend
 from duckpond.storage.s3_backend import S3Backend
-from duckpond.accounts.models import Account
 
 logger = structlog.get_logger()
 
@@ -67,14 +67,11 @@ def get_storage_backend(
 
         else:
             raise ValueError(
-                f"Unsupported storage backend: {backend_type}. "
-                f"Supported types: local, s3"
+                f"Unsupported storage backend: {backend_type}. Supported types: local, s3"
             )
 
     except Exception as e:
-        logger.error(
-            "Failed to create storage backend", backend_type=backend_type, error=str(e)
-        )
+        logger.error("Failed to create storage backend", backend_type=backend_type, error=str(e))
         raise StorageBackendError(
             backend_type, "init", f"Failed to initialize storage backend: {str(e)}"
         ) from e
@@ -242,9 +239,7 @@ async def check_storage_connectivity(
             return False, f"Failed to create storage backend: {str(e)}"
 
     try:
-        await storage_backend.list_files(
-            prefix="", account_id=account.account_id, recursive=False
-        )
+        await storage_backend.list_files(prefix="", account_id=account.account_id, recursive=False)
 
         logger.info(
             "Storage connectivity check passed",

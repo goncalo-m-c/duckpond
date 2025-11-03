@@ -34,9 +34,7 @@ class UploadResponse(BaseModel):
         None, description="Compression ratio (original/compressed)"
     )
     throughput_mbps: Optional[float] = Field(None, description="Throughput in MB/s")
-    duration_seconds: Optional[float] = Field(
-        None, description="Total processing time in seconds"
-    )
+    duration_seconds: Optional[float] = Field(None, description="Total processing time in seconds")
 
 
 @router.post(

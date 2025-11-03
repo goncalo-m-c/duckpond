@@ -95,8 +95,7 @@ class ArrowIPCHandler:
                 schema = batch.schema
             elif batch.schema != schema:
                 raise ProtocolError(
-                    f"Inconsistent schema in batch. Expected: {schema}, "
-                    f"Got: {batch.schema}"
+                    f"Inconsistent schema in batch. Expected: {schema}, Got: {batch.schema}"
                 )
 
             batch_list.append(batch)

@@ -9,18 +9,14 @@ from pydantic import BaseModel, ConfigDict, Field
 class AccountCreate(BaseModel):
     """Schema for creating a new account."""
 
-    name: str = Field(
-        ..., min_length=1, max_length=255, description="Unique account name"
-    )
+    name: str = Field(..., min_length=1, max_length=255, description="Unique account name")
     storage_backend: Literal["local", "s3"] = Field(
         default="local", description="Storage backend type"
     )
     storage_config: dict[str, str] = Field(
         default_factory=dict, description="Storage backend configuration"
     )
-    max_storage_gb: int = Field(
-        default=100, ge=1, description="Maximum storage quota in gigabytes"
-    )
+    max_storage_gb: int = Field(default=100, ge=1, description="Maximum storage quota in gigabytes")
     max_query_memory_gb: int = Field(
         default=4, ge=1, description="Maximum query memory in gigabytes"
     )

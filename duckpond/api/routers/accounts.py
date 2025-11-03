@@ -310,8 +310,8 @@ async def create_api_key(
         account, _ = result
 
         # Generate new API key
-        import secrets
         import hashlib
+        import secrets
 
         # Generate key: duck_<32 random hex chars>
         new_key = f"duck_{secrets.token_hex(16)}"

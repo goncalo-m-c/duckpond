@@ -1,15 +1,14 @@
 """Authentication endpoints for web UI."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from duckpond.accounts.auth import get_authenticator
-from duckpond.accounts.models import Account, APIKey
 from duckpond.api.dependencies import get_api_key
 from duckpond.config import get_settings
 from duckpond.db.session import get_db_session

@@ -31,7 +31,7 @@ class MarimoProcess:
         port: int,
         account_data_dir: Path,
         account_id: str,
-        docker_image: str = "python:3.12-slim",
+        docker_image: str = "duckpond:25.1",
         memory_limit_mb: int = 2048,
         cpu_limit: float = 2.0,
         startup_timeout: int = 30,

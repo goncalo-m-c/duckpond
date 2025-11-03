@@ -14,9 +14,9 @@ from typing import AsyncGenerator
 
 import duckdb
 
+from duckpond.accounts.models import Account
 from duckpond.exceptions import ConcurrentQueryLimitError, QuotaExceededError
 from duckpond.storage.backend import StorageBackend
-from duckpond.accounts.models import Account
 
 
 @dataclass

@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, File, UploadFile, Request, status
+from fastapi import APIRouter, File, Request, UploadFile, status
 from pydantic import BaseModel, Field
 
 from duckpond.api.dependencies import CurrentAccount
@@ -543,14 +543,10 @@ async def get_streaming_status(
                     "storage_path": str(storage_root),
                     "metadata": {
                         "created_at": (
-                            metadata.created_at.isoformat()
-                            if metadata.created_at
-                            else None
+                            metadata.created_at.isoformat() if metadata.created_at else None
                         ),
                         "updated_at": (
-                            metadata.updated_at.isoformat()
-                            if metadata.updated_at
-                            else None
+                            metadata.updated_at.isoformat() if metadata.updated_at else None
                         ),
                     },
                 }

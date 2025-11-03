@@ -1,11 +1,10 @@
 """Query executor for DuckDB with DuckLake catalog integration."""
 
 import asyncio
-import base64
 import logging
 import time
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 import duckdb
 import pyarrow as pa
@@ -301,7 +300,6 @@ class QueryExecutor:
         Raises:
             ValueError: If catalog path cannot be determined
         """
-        from pathlib import Path
         from duckpond.config import get_settings
 
         settings = get_settings()

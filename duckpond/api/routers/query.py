@@ -31,12 +31,8 @@ class QueryRequest(BaseModel):
     query: str = Field(..., description="SQL query to execute")
     version: Optional[int] = Field(None, description="Snapshot version (time travel)")
     limit: Optional[int] = Field(None, ge=1, le=10000, description="Result limit")
-    timeout_seconds: Optional[int] = Field(
-        30, ge=1, le=300, description="Query timeout in seconds"
-    )
-    output_format: Optional[str] = Field(
-        "json", description="Output format (json, arrow, csv)"
-    )
+    timeout_seconds: Optional[int] = Field(30, ge=1, le=300, description="Query timeout in seconds")
+    output_format: Optional[str] = Field("json", description="Output format (json, arrow, csv)")
 
 
 class QueryResponse(BaseModel):
@@ -124,7 +120,9 @@ async def execute_query(
 
             query = request.query
             if request.version is not None:
-                query = f"SELECT * FROM {dataset_name} AS OF VERSION {request.version} WHERE {query}"
+                query = (
+                    f"SELECT * FROM {dataset_name} AS OF VERSION {request.version} WHERE {query}"
+                )
 
             result = await executor.execute_query(
                 sql=query,

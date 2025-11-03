@@ -4,7 +4,6 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from duckpond.db.session import get_db_session
 from duckpond.accounts import (
     AccountAlreadyExistsError,
     AccountCreate,
@@ -16,6 +15,7 @@ from duckpond.accounts import (
     AccountResponse,
     AccountUpdate,
 )
+from duckpond.db.session import get_db_session
 
 logger = structlog.get_logger(__name__)
 
@@ -135,9 +135,7 @@ async def get_account(
 )
 async def list_accounts(
     offset: int = Query(default=0, ge=0, description="Number of records to skip"),
-    limit: int = Query(
-        default=100, ge=1, le=1000, description="Maximum number of records"
-    ),
+    limit: int = Query(default=100, ge=1, le=1000, description="Maximum number of records"),
     manager: AccountManager = Depends(get_account_manager),
 ) -> AccountListResponse:
     """

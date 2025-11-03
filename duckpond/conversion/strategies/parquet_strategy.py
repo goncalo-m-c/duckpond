@@ -1,7 +1,7 @@
 """Parquet copy strategy."""
 
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 import duckdb
 
@@ -35,9 +35,7 @@ class ParquetCopyStrategy(BaseStrategy):
         """
         try:
             source_str = self._escape_path(source_path)
-            result = conn.execute(
-                f"SELECT COUNT(*) FROM read_parquet('{source_str}')"
-            ).fetchone()
+            result = conn.execute(f"SELECT COUNT(*) FROM read_parquet('{source_str}')").fetchone()
             row_count = result[0] if result else 0
 
             shutil.copy2(source_path, dest_path)

@@ -12,11 +12,11 @@ from typing import Optional
 import typer
 from rich.console import Console
 from rich.progress import (
+    BarColumn,
     Progress,
     SpinnerColumn,
-    TextColumn,
-    BarColumn,
     TaskProgressColumn,
+    TextColumn,
 )
 from rich.table import Table
 
@@ -29,7 +29,7 @@ from duckpond.cli.output import (
 )
 from duckpond.config import get_settings
 from duckpond.logging_config import get_logger
-from duckpond.streaming import StreamingIngestor, BufferManager
+from duckpond.streaming import BufferManager, StreamingIngestor
 
 app = typer.Typer(help="Streaming data ingestion using Arrow IPC format")
 console = Console()
@@ -135,11 +135,7 @@ def ingest(
 
         if storage_path is None:
             storage_path = (
-                Path(settings.local_storage_path)
-                / "accounts"
-                / account_id
-                / "streams"
-                / stream
+                Path(settings.local_storage_path) / "accounts" / account_id / "streams" / stream
             )
 
         storage_path = storage_path.resolve()
@@ -332,9 +328,7 @@ def validate(
             "File Size": _format_bytes(file_size),
             "Total Batches": f"{total_batches:,}",
             "Total Rows": f"{total_rows:,}",
-            "Avg Rows/Batch": f"{total_rows / total_batches:.1f}"
-            if total_batches > 0
-            else "0",
+            "Avg Rows/Batch": f"{total_rows / total_batches:.1f}" if total_batches > 0 else "0",
         }
 
         print_dict(stats, title="File Statistics")
@@ -360,9 +354,7 @@ def validate(
             console.print(f"[bold]Sample Data (first {show_samples} rows):[/bold]")
             console.print("")
 
-            sample_table = sample_table.slice(
-                0, min(show_samples, sample_table.num_rows)
-            )
+            sample_table = sample_table.slice(0, min(show_samples, sample_table.num_rows))
 
             try:
                 df = sample_table.to_pandas()
@@ -370,9 +362,7 @@ def validate(
             except Exception as e:
                 print_warning(f"Could not display sample data: {e}")
 
-        logger.info(
-            f"Validated IPC file: {ipc_file} ({total_rows} rows, {total_batches} batches)"
-        )
+        logger.info(f"Validated IPC file: {ipc_file} ({total_rows} rows, {total_batches} batches)")
 
     except typer.Exit:
         raise
@@ -406,9 +396,7 @@ def info() -> None:
 
     console.print("[bold]Typical Workflow:[/bold]")
     console.print("  1. Generate Arrow IPC stream from your data source")
-    console.print(
-        "  2. Validate the stream (optional): [cyan]duckpond stream validate[/cyan]"
-    )
+    console.print("  2. Validate the stream (optional): [cyan]duckpond stream validate[/cyan]")
     console.print("  3. Ingest into dataset: [cyan]duckpond stream ingest[/cyan]")
     console.print("  4. Query the data: [cyan]duckpond query exec[/cyan]")
     console.print("")
@@ -424,21 +412,15 @@ def info() -> None:
     console.print("")
     console.print("From Python:")
     console.print("  [dim]import pyarrow as pa[/dim]")
-    console.print(
-        "  [dim]schema = pa.schema([('id', pa.int64()), ('name', pa.string())])[/dim]"
-    )
-    console.print(
-        "  [dim]with pa.ipc.new_stream('data.arrow', schema) as writer:[/dim]"
-    )
+    console.print("  [dim]schema = pa.schema([('id', pa.int64()), ('name', pa.string())])[/dim]")
+    console.print("  [dim]with pa.ipc.new_stream('data.arrow', schema) as writer:[/dim]")
     console.print("  [dim]    writer.write_batch(batch)[/dim]")
     console.print("")
 
     console.print("From pandas DataFrame:")
     console.print("  [dim]import pyarrow as pa[/dim]")
     console.print("  [dim]table = pa.Table.from_pandas(df)[/dim]")
-    console.print(
-        "  [dim]with pa.ipc.new_stream('data.arrow', table.schema) as writer:[/dim]"
-    )
+    console.print("  [dim]with pa.ipc.new_stream('data.arrow', table.schema) as writer:[/dim]")
     console.print("  [dim]    writer.write_table(table)[/dim]")
     console.print("")
 

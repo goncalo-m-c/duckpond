@@ -69,6 +69,7 @@ def serve(
         duckpond api serve --log-level debug
     """
     import uvicorn
+
     from duckpond.config import get_settings
 
     settings = get_settings()
@@ -107,9 +108,7 @@ def serve(
 
     if reload:
         uvicorn_config["reload"] = True
-        console.print(
-            "[yellow]  Mode:        Development (auto-reload enabled)[/yellow]\n"
-        )
+        console.print("[yellow]  Mode:        Development (auto-reload enabled)[/yellow]\n")
     else:
         uvicorn_config["workers"] = workers
         mode = "Production" if workers > 1 else "Single Worker"

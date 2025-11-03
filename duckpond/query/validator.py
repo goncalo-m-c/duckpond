@@ -127,9 +127,7 @@ class SQLValidator:
         Raises:
             SQLValidationError: If query doesn't start with allowed prefix
         """
-        has_valid_prefix = any(
-            sql_lower.startswith(prefix) for prefix in self.ALLOWED_PREFIXES
-        )
+        has_valid_prefix = any(sql_lower.startswith(prefix) for prefix in self.ALLOWED_PREFIXES)
 
         if not has_valid_prefix:
             allowed = ", ".join(p.strip().upper() for p in self.ALLOWED_PREFIXES)

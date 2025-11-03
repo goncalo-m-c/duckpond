@@ -166,9 +166,7 @@ class APIKey(Base):
         DateTime, nullable=True, comment="Timestamp when API key expires"
     )
 
-    account: Mapped["Account"] = relationship(
-        "Account", back_populates="api_keys", lazy="selectin"
-    )
+    account: Mapped["Account"] = relationship("Account", back_populates="api_keys", lazy="selectin")
 
     __table_args__ = (
         Index("idx_api_keys_account", "account_id"),

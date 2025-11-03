@@ -195,9 +195,7 @@ class DuckDBConverter:
             Schema fingerprint (16-character hex string)
         """
         path_str = str(parquet_path).replace("'", "''")
-        result = conn.execute(
-            f"DESCRIBE SELECT * FROM read_parquet('{path_str}')"
-        ).fetchall()
+        result = conn.execute(f"DESCRIBE SELECT * FROM read_parquet('{path_str}')").fetchall()
 
         schema_str = ",".join(f"{row[0]}:{row[1]}" for row in result)
 

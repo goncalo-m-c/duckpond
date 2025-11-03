@@ -12,7 +12,6 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 
 _sym_db = _symbol_database.Default()
 
-from duckpond.streaming.prometheus import types_pb2 as types__pb2
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(

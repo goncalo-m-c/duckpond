@@ -12,10 +12,10 @@ from typing import Annotated
 from fastapi import Cookie, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from duckpond.accounts.auth import get_authenticator
 from duckpond.api.exceptions import ForbiddenException, UnauthorizedException
 from duckpond.config import get_settings
 from duckpond.db.session import get_db_session
-from duckpond.accounts.auth import get_authenticator
 
 
 async def get_api_key(

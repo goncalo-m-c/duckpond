@@ -137,9 +137,7 @@ class DuckLakeCatalogManager:
             if request.if_not_exists:
                 exists = await self._dataset_exists(request.name)
                 if exists:
-                    logger.info(
-                        f"Dataset {request.name} already exists, skipping creation"
-                    )
+                    logger.info(f"Dataset {request.name} already exists, skipping creation")
                     return await self.get_dataset_metadata(request.name)
 
             create_sql = self._build_create_sql(request)
@@ -257,9 +255,7 @@ class DuckLakeCatalogManager:
             """
 
             if dataset_type:
-                type_filter = (
-                    "BASE TABLE" if dataset_type == DatasetType.TABLE else "VIEW"
-                )
+                type_filter = "BASE TABLE" if dataset_type == DatasetType.TABLE else "VIEW"
                 query += f" AND table_type = '{type_filter}'"
 
             if pattern:
@@ -426,9 +422,7 @@ class DuckLakeCatalogManager:
                 await self._execute_sql(alter_sql)
 
             for old_name, new_name in request.rename_columns.items():
-                alter_sql = (
-                    f"ALTER TABLE {full_name} RENAME COLUMN {old_name} TO {new_name}"
-                )
+                alter_sql = f"ALTER TABLE {full_name} RENAME COLUMN {old_name} TO {new_name}"
                 await self._execute_sql(alter_sql)
 
             for col in request.alter_columns:
@@ -891,8 +885,9 @@ async def create_catalog_manager(
         async with create_catalog_manager("account-123") as manager:
             datasets = await manager.list_datasets()
     """
-    import duckdb
     from pathlib import Path
+
+    import duckdb
 
     if settings is None:
         from duckpond.config import get_settings
@@ -917,13 +912,8 @@ async def create_catalog_manager(
 
             if hasattr(settings, "s3_access_key_id") and settings.s3_access_key_id:
                 conn.execute(f"SET s3_access_key_id='{settings.s3_access_key_id}'")
-            if (
-                hasattr(settings, "s3_secret_access_key")
-                and settings.s3_secret_access_key
-            ):
-                conn.execute(
-                    f"SET s3_secret_access_key='{settings.s3_secret_access_key}'"
-                )
+            if hasattr(settings, "s3_secret_access_key") and settings.s3_secret_access_key:
+                conn.execute(f"SET s3_secret_access_key='{settings.s3_secret_access_key}'")
             if hasattr(settings, "s3_region") and settings.s3_region:
                 conn.execute(f"SET s3_region='{settings.s3_region}'")
 

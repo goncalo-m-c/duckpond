@@ -68,9 +68,7 @@ def init(
             if Path(db_path).exists() and not force:
                 print_warning(f"Database already exists: {db_path}")
                 if sys.stdin.isatty():
-                    if not typer.confirm(
-                        "Re-initialize? This will destroy existing data!"
-                    ):
+                    if not typer.confirm("Re-initialize? This will destroy existing data!"):
                         print_info("Initialization cancelled")
                         raise typer.Exit(0)
                 else:

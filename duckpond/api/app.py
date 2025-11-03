@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 
 import structlog
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -14,10 +14,10 @@ from duckpond.api.exceptions import (
     DuckPondAPIException,
 )
 from duckpond.api.middleware import (
+    AccountContextMiddleware,
     CORSHeadersMiddleware,
     LoggingMiddleware,
     RequestIDMiddleware,
-    AccountContextMiddleware,
 )
 from duckpond.api.routers import (
     accounts_router,

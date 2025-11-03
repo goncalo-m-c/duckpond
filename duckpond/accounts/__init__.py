@@ -6,14 +6,8 @@ from duckpond.accounts.manager import (
     AccountManagerError,
     AccountNotFoundError,
 )
-from duckpond.accounts.models import APIKey, Account, AccountStatus
+from duckpond.accounts.models import Account, AccountStatus, APIKey
 from duckpond.accounts.schemas import (
-    AccountCreate,
-    AccountCreateResponse,
-    AccountListResponse,
-    AccountResponse,
-    AccountUpdate,
-    # Backward compatibility
     AccountCreate,
     AccountCreateResponse,
     AccountListResponse,

@@ -33,6 +33,11 @@ class APIClient {
       );
     }
 
+    // Handle 204 No Content responses (no body to parse)
+    if (response.status === 204) {
+      return null;
+    }
+
     return response.json();
   }
 

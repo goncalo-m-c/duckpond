@@ -187,9 +187,7 @@ def _get_limits_config(settings) -> Table:
     table.add_row("Max File Size", f"{settings.max_file_size_mb} MB")
     table.add_row("Default Storage Quota", f"{settings.default_max_storage_gb} GB")
     table.add_row("Default Query Memory", f"{settings.default_max_query_memory_gb} GB")
-    table.add_row(
-        "Max Concurrent Queries", str(settings.default_max_concurrent_queries)
-    )
+    table.add_row("Max Concurrent Queries", str(settings.default_max_concurrent_queries))
 
     return table
 

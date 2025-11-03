@@ -52,9 +52,7 @@ class JSONConversionStrategy(BaseStrategy):
 
             conn.execute(query)
 
-            result = conn.execute(
-                f"SELECT COUNT(*) FROM read_parquet('{dest_str}')"
-            ).fetchone()
+            result = conn.execute(f"SELECT COUNT(*) FROM read_parquet('{dest_str}')").fetchone()
             return result[0] if result else 0
 
         except Exception as e:

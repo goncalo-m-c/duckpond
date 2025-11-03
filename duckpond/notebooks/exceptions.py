@@ -40,9 +40,7 @@ class ProcessHealthException(NotebookException):
         """Initialize exception with session ID and details."""
         self.session_id = session_id
         self.details = details
-        super().__init__(
-            f"Notebook process health check failed for {session_id}: {details}"
-        )
+        super().__init__(f"Notebook process health check failed for {session_id}: {details}")
 
 
 class PathSecurityException(NotebookException):

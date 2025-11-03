@@ -106,9 +106,7 @@ class DuckDBConnectionPool:
                 logger.error(f"Failed to create connection: {e}")
                 raise
 
-        logger.debug(
-            f"Connection pool initialized with {connections_to_create} connections"
-        )
+        logger.debug(f"Connection pool initialized with {connections_to_create} connections")
 
     async def _create_connection(self) -> duckdb.DuckDBPyConnection:
         """
@@ -179,9 +177,7 @@ class DuckDBConnectionPool:
         conn.execute("INSTALL ducklake")
         conn.execute("LOAD ducklake")
 
-        logger.debug(
-            "Attaching DuckLake catalog", extra={"catalog_url": self.catalog_url}
-        )
+        logger.debug("Attaching DuckLake catalog", extra={"catalog_url": self.catalog_url})
 
         conn.execute(f"ATTACH '{self.catalog_url}' AS catalog (TYPE ducklake)")
 

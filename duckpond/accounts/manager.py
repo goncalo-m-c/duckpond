@@ -11,6 +11,9 @@ from slugify import slugify
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from duckpond.accounts.auth import get_authenticator
+from duckpond.accounts.models import Account, APIKey
+from duckpond.catalog.manager import create_catalog_manager
 from duckpond.config import get_settings
 from duckpond.exceptions import DuckPondError
 from duckpond.storage.utils import (
@@ -18,9 +21,6 @@ from duckpond.storage.utils import (
     get_storage_backend_for_account,
     validate_storage_config,
 )
-from duckpond.accounts.auth import get_authenticator
-from duckpond.accounts.models import APIKey, Account
-from duckpond.catalog.manager import create_catalog_manager
 
 logger = structlog.get_logger()
 
@@ -106,9 +106,7 @@ class AccountManager:
                 context={"account_name": name},
             )
 
-        valid, error = await validate_storage_config(
-            storage_backend, storage_config or {}
-        )
+        valid, error = await validate_storage_config(storage_backend, storage_config or {})
         if not valid:
             raise AccountManagerError(
                 f"Invalid storage configuration: {error}",
@@ -129,9 +127,7 @@ class AccountManager:
             )
 
             catalog_manager = await create_catalog_manager(account_id)
-            logger.debug(
-                "Created DuckLake catalog", catalog_url=catalog_manager.catalog_url
-            )
+            logger.debug("Created DuckLake catalog", catalog_url=catalog_manager.catalog_url)
 
             data_dirs = await self._create_data_dirs(account_id)
             logger.debug("Created data directories", data_dirs=data_dirs)
@@ -245,12 +241,7 @@ class AccountManager:
         count_result = await self.session.execute(count_stmt)
         total = count_result.scalar_one()
 
-        stmt = (
-            select(Account)
-            .order_by(Account.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        stmt = select(Account).order_by(Account.created_at.desc()).offset(offset).limit(limit)
         result = await self.session.execute(stmt)
         accounts = list(result.scalars().all())
 
@@ -378,9 +369,7 @@ class AccountManager:
         await self.session.flush()
         await self.session.refresh(api_key_obj)
 
-        logger.info(
-            "API key created", account_id=account_id, key_id=key_id, expires_at=expires_at
-        )
+        logger.info("API key created", account_id=account_id, key_id=key_id, expires_at=expires_at)
 
         return api_key_obj, api_key
 
@@ -402,9 +391,7 @@ class AccountManager:
         logger.info("Revoking API key", key_id=key_id, account_id=account_id)
 
         if account_id:
-            stmt = select(APIKey).where(
-                APIKey.account_id == account_id, APIKey.key_id == key_id
-            )
+            stmt = select(APIKey).where(APIKey.account_id == account_id, APIKey.key_id == key_id)
         else:
             stmt = select(APIKey).where(APIKey.key_id == key_id)
 
@@ -444,9 +431,7 @@ class AccountManager:
         Raises:
             AccountNotFoundError: If account not found
         """
-        logger.debug(
-            "Listing API keys", account_id=account_id, include_expired=include_expired
-        )
+        logger.debug("Listing API keys", account_id=account_id, include_expired=include_expired)
 
         await self.get_account_by_id(account_id)
 
@@ -488,9 +473,7 @@ class AccountManager:
 
         await self.get_account_by_id(account_id)
 
-        stmt = select(APIKey).where(
-            APIKey.account_id == account_id, APIKey.key_id == key_id
-        )
+        stmt = select(APIKey).where(APIKey.account_id == account_id, APIKey.key_id == key_id)
         result = await self.session.execute(stmt)
         api_key = result.scalar_one_or_none()
 
@@ -570,11 +553,7 @@ class AccountManager:
 
     async def _account_id_exists(self, account_id: str) -> bool:
         """Check if account ID already exists."""
-        stmt = (
-            select(func.count())
-            .select_from(Account)
-            .where(Account.account_id == account_id)
-        )
+        stmt = select(func.count()).select_from(Account).where(Account.account_id == account_id)
         result = await self.session.execute(stmt)
         count = result.scalar_one()
         return count > 0
@@ -593,15 +572,11 @@ class AccountManager:
             AccountManagerError: If catalog creation fails
         """
         try:
-            streams_dir = (
-                self.settings.local_storage_path / "accounts" / account_id / "streams"
-            )
+            streams_dir = self.settings.local_storage_path / "accounts" / account_id / "streams"
             streams_dir.mkdir(parents=True, exist_ok=True)
             streams_dir_path = str(streams_dir)
 
-            tables_dir = (
-                self.settings.local_storage_path / "accounts" / account_id / "tables"
-            )
+            tables_dir = self.settings.local_storage_path / "accounts" / account_id / "tables"
             tables_dir.mkdir(parents=True, exist_ok=True)
             tables_dir_path = str(tables_dir)
 

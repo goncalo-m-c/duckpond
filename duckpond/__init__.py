@@ -1,6 +1,6 @@
 """DuckPond: Multi-account data platform with DuckDB and DuckLake."""
 
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("duckpond")

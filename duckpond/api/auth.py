@@ -1,13 +1,13 @@
 """API authentication using account API keys."""
 
 import structlog
-from fastapi import Depends, HTTPException, Query, Request, Security, status
+from fastapi import Depends, HTTPException, Query, Security, status
 from fastapi.security import APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from duckpond.db.session import get_db_session
 from duckpond.accounts.auth import get_authenticator
-from duckpond.accounts.models import APIKey, Account
+from duckpond.accounts.models import Account, APIKey
+from duckpond.db.session import get_db_session
 
 logger = structlog.get_logger(__name__)
 

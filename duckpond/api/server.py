@@ -44,9 +44,7 @@ logger = logging.getLogger(__name__)
 )
 @click.option(
     "--log-level",
-    type=click.Choice(
-        ["debug", "info", "warning", "error", "critical"], case_sensitive=False
-    ),
+    type=click.Choice(["debug", "info", "warning", "error", "critical"], case_sensitive=False),
     help="Logging level (overrides config)",
 )
 @click.option(
@@ -114,9 +112,7 @@ def serve(
     click.echo(f"  Reload:      {reload}")
     click.echo(f"  Log Level:   {effective_log_level}")
     click.echo(f"  Access Log:  {access_log}")
-    click.echo(
-        f"\n  Docs:        http://{host if host != '0.0.0.0' else 'localhost'}:{port}/docs"
-    )
+    click.echo(f"\n  Docs:        http://{host if host != '0.0.0.0' else 'localhost'}:{port}/docs")
     click.echo(
         f"  Health:      http://{host if host != '0.0.0.0' else 'localhost'}:{port}/health\n"
     )
@@ -131,11 +127,7 @@ def serve(
 
     if reload:
         uvicorn_config["reload"] = True
-        click.echo(
-            click.style(
-                "  Mode:        Development (auto-reload enabled)\n", fg="yellow"
-            )
-        )
+        click.echo(click.style("  Mode:        Development (auto-reload enabled)\n", fg="yellow"))
     else:
         uvicorn_config["workers"] = workers
         mode = "Production" if workers > 1 else "Single Worker"

@@ -25,9 +25,7 @@ app = typer.Typer(help="Database management commands", no_args_is_help=True)
 
 @app.command("migrate")
 def migrate_cmd(
-    revision: str = typer.Option(
-        "head", "--revision", "-r", help="Target revision to migrate to"
-    ),
+    revision: str = typer.Option("head", "--revision", "-r", help="Target revision to migrate to"),
     sql: bool = typer.Option(False, "--sql", help="Generate SQL instead of executing"),
 ) -> None:
     """Run database migrations to specified revision."""
@@ -87,9 +85,7 @@ def current_cmd() -> None:
 
 @app.command("downgrade")
 def downgrade_cmd(
-    revision: str = typer.Option(
-        "-1", "--revision", "-r", help="Target revision to downgrade to"
-    ),
+    revision: str = typer.Option("-1", "--revision", "-r", help="Target revision to downgrade to"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
 ) -> None:
     """Downgrade database to specified revision."""
@@ -128,9 +124,7 @@ def downgrade_cmd(
 
 @app.command("history")
 def history_cmd(
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Show detailed migration info"
-    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed migration info"),
 ) -> None:
     """Show migration history."""
 
@@ -145,9 +139,7 @@ def history_cmd(
                 console.print("[yellow]No migrations found[/yellow]")
                 return
 
-            table = Table(
-                title="Migration History", show_header=True, header_style="bold magenta"
-            )
+            table = Table(title="Migration History", show_header=True, header_style="bold magenta")
             table.add_column("Current", style="green", width=10)
             table.add_column("Revision", style="cyan", width=15)
             table.add_column("Down Revision", style="dim", width=15)

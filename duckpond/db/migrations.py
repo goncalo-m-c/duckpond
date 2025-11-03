@@ -4,12 +4,12 @@ import asyncio
 from pathlib import Path
 
 import structlog
-from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from alembic import command
 
 logger = structlog.get_logger()
 

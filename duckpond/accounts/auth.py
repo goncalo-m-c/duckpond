@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from duckpond.accounts.models import APIKey, Account
+from duckpond.accounts.models import Account, APIKey
 
 logger = structlog.get_logger(__name__)
 

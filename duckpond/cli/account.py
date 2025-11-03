@@ -8,6 +8,12 @@ from typing import Optional
 import typer
 from rich.console import Console
 
+from duckpond.accounts.manager import (
+    AccountAlreadyExistsError,
+    AccountManager,
+    AccountNotFoundError,
+    APIKeyNotFoundError,
+)
 from duckpond.cli.output import (
     confirm,
     print_dict,
@@ -19,14 +25,8 @@ from duckpond.cli.output import (
     print_table,
     print_warning,
 )
-from duckpond.db.session import get_engine, create_session_factory, get_session
+from duckpond.db.session import create_session_factory, get_engine, get_session
 from duckpond.logging_config import get_logger
-from duckpond.accounts.manager import (
-    APIKeyNotFoundError,
-    AccountAlreadyExistsError,
-    AccountManager,
-    AccountNotFoundError,
-)
 
 app = typer.Typer(help="Manage accounts")
 console = Console()
@@ -132,9 +132,7 @@ def create(
             raise typer.Exit(1)
 
         if not name.replace("-", "").replace("_", "").isalnum():
-            print_error(
-                "Account name must be alphanumeric (hyphens and underscores allowed)"
-            )
+            print_error("Account name must be alphanumeric (hyphens and underscores allowed)")
             raise typer.Exit(1)
 
         storage_config = {}
@@ -282,7 +280,8 @@ def list(
                             "max_concurrent_queries": t.max_concurrent_queries,
                             "created_at": t.created_at.isoformat(),
                         }
-                        for t in accounts                     ],
+                        for t in accounts
+                    ],
                     "total": total,
                     "offset": offset,
                     "limit": limit,
@@ -361,9 +360,7 @@ def show(
                     "max_query_memory_gb": account.max_query_memory_gb,
                     "max_concurrent_queries": account.max_concurrent_queries,
                     "created_at": account.created_at.isoformat(),
-                    "updated_at": account.updated_at.isoformat()
-                    if account.updated_at
-                    else None,
+                    "updated_at": account.updated_at.isoformat() if account.updated_at else None,
                 }
             )
         else:
@@ -379,9 +376,7 @@ def show(
                 "Created": account.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             }
             if account.updated_at:
-                basic_info["Last Updated"] = account.updated_at.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                basic_info["Last Updated"] = account.updated_at.strftime("%Y-%m-%d %H:%M:%S")
 
             print_dict(basic_info, title="Basic Information")
             console.print()
@@ -498,9 +493,7 @@ def update(
                     "max_storage_gb": account.max_storage_gb,
                     "max_query_memory_gb": account.max_query_memory_gb,
                     "max_concurrent_queries": account.max_concurrent_queries,
-                    "updated_at": account.updated_at.isoformat()
-                    if account.updated_at
-                    else None,
+                    "updated_at": account.updated_at.isoformat() if account.updated_at else None,
                 }
             )
         else:
@@ -551,9 +544,7 @@ def storage_info(
 
         usage_str = format_storage_size(usage_bytes)
         usage_gb = usage_bytes / (1024**3)
-        usage_pct = (
-            (usage_gb / account.max_storage_gb * 100) if account.max_storage_gb > 0 else 0
-        )
+        usage_pct = (usage_gb / account.max_storage_gb * 100) if account.max_storage_gb > 0 else 0
 
         output_format = ctx.obj.output_format if ctx.obj else "table"
 
@@ -597,9 +588,7 @@ def storage_info(
                 "Current Usage": usage_str,
                 "Storage Quota": f"{account.max_storage_gb} GB",
                 "Usage Percentage": f"{usage_pct:.1f}%",
-                "Available": format_storage_size(
-                    (account.max_storage_gb * 1024**3) - usage_bytes
-                ),
+                "Available": format_storage_size((account.max_storage_gb * 1024**3) - usage_bytes),
             }
 
             if usage_pct >= 90:
@@ -709,9 +698,7 @@ def delete(
                         print_info("Deletion cancelled")
                         raise typer.Exit(0)
             else:
-                print_error(
-                    "Deletion requires confirmation. Use --force in non-interactive mode"
-                )
+                print_error("Deletion requires confirmation. Use --force in non-interactive mode")
                 raise typer.Exit(1)
 
         asyncio.run(_delete())
@@ -882,12 +869,8 @@ def list_keys(
                             "key_id": key.key_id,
                             "description": key.description,
                             "created_at": key.created_at.isoformat(),
-                            "expires_at": key.expires_at.isoformat()
-                            if key.expires_at
-                            else None,
-                            "last_used": key.last_used.isoformat()
-                            if key.last_used
-                            else None,
+                            "expires_at": key.expires_at.isoformat() if key.expires_at else None,
+                            "last_used": key.last_used.isoformat() if key.last_used else None,
                         }
                         for key in keys
                     ],
@@ -900,12 +883,8 @@ def list_keys(
                     "Key ID": key.key_id[:16] + "...",
                     "Description": key.description or "N/A",
                     "Created": key.created_at.strftime("%Y-%m-%d"),
-                    "Expires": key.expires_at.strftime("%Y-%m-%d")
-                    if key.expires_at
-                    else "Never",
-                    "Last Used": key.last_used.strftime("%Y-%m-%d")
-                    if key.last_used
-                    else "Never",
+                    "Expires": key.expires_at.strftime("%Y-%m-%d") if key.expires_at else "Never",
+                    "Last Used": key.last_used.strftime("%Y-%m-%d") if key.last_used else "Never",
                 }
                 for key in keys
             ]
@@ -956,9 +935,7 @@ def revoke_key(
         print_warning(f"Revoking API key: {key_id}")
 
         if not force and sys.stdin.isatty():
-            if not confirm(
-                f"Revoke API key {key_id}? This cannot be undone.", default=False
-            ):
+            if not confirm(f"Revoke API key {key_id}? This cannot be undone.", default=False):
                 print_info("Revocation cancelled")
                 raise typer.Exit(0)
 

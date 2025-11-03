@@ -9,6 +9,7 @@ from typing import Optional
 import typer
 from rich.console import Console
 
+from duckpond.accounts.manager import AccountManager
 from duckpond.cli.output import (
     print_error,
     print_info,
@@ -17,12 +18,9 @@ from duckpond.cli.output import (
     print_table,
     print_warning,
 )
-from duckpond.db.session import get_engine, create_session_factory, get_session
+from duckpond.db.session import create_session_factory, get_engine, get_session
 from duckpond.logging_config import get_logger
-from duckpond.query.ducklake import AccountDuckLakeManager
-from duckpond.query.executor import QueryExecutor
 from duckpond.query.docker_executor import DockerQueryExecutor
-from duckpond.accounts.manager import AccountManager
 
 app = typer.Typer(help="Execute SQL queries")
 console = Console()
@@ -153,20 +151,9 @@ def execute(
                         attach_catalog=attach_catalog,
                     )
                 else:
-                    # Use standard executor
-                    ducklake = AccountDuckLakeManager(account)
-                    await ducklake.initialize()
-                    try:
-                        executor = QueryExecutor(ducklake)
-                        result = await executor.execute_query(
-                            sql=query_sql,
-                            output_format=exec_format,
-                            limit=limit,
-                            timeout_seconds=timeout,
-                            attach_catalog=attach_catalog,
-                        )
-                    finally:
-                        await ducklake.close()
+                    # Use direct local shell (no Docker)
+                    print_warning("Direct shell not implemented yet. Use --docker flag.")
+                    raise typer.Exit(1)
 
                 return result
 
@@ -255,16 +242,9 @@ def explain(
                     executor = DockerQueryExecutor.from_account(account)
                     plan = await executor.explain_query(query_sql, attach_catalog=attach_catalog)
                 else:
-                    # Use standard executor
-                    ducklake = AccountDuckLakeManager(account)
-                    await ducklake.initialize()
-                    try:
-                        executor = QueryExecutor(ducklake)
-                        plan = await executor.explain_query(
-                            query_sql, attach_catalog=attach_catalog
-                        )
-                    finally:
-                        await ducklake.close()
+                    # Use direct local shell (no Docker)
+                    print_warning("Direct shell not implemented yet. Use --docker flag.")
+                    raise typer.Exit(1)
 
                 return plan
 
@@ -328,9 +308,10 @@ def shell(
 
                 if use_docker:
                     # Use Docker-based shell
-                    from duckpond.docker.runners import QueryRunner
                     from pathlib import Path
+
                     from duckpond.config import get_settings
+                    from duckpond.docker.runners import QueryRunner
 
                     settings = get_settings()
                     account_data_dir = (
@@ -407,7 +388,6 @@ def shell(
 
                         # Write init SQL to a file in the container
                         # Use proper shell quoting to handle special characters
-                        import shlex
 
                         write_init_cmd = [
                             "docker",

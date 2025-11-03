@@ -5,7 +5,7 @@ including validation of headers, content extraction, and error handling.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -125,15 +125,12 @@ class PrometheusParser:
             "body_size": len(body),
             "content_type": normalized_headers.get("content-type", ""),
             "content_encoding": normalized_headers.get("content-encoding", ""),
-            "version": normalized_headers.get(
-                "x-prometheus-remote-write-version", "unknown"
-            ),
+            "version": normalized_headers.get("x-prometheus-remote-write-version", "unknown"),
             "is_valid": True,
         }
 
         logger.debug(
-            f"Parsed Prometheus request: {info['body_size']} bytes, "
-            f"version {info['version']}"
+            f"Parsed Prometheus request: {info['body_size']} bytes, version {info['version']}"
         )
 
         return info
@@ -285,6 +282,4 @@ class PrometheusParser:
 
             return major, minor, patch
         except (ValueError, IndexError) as e:
-            raise ValueError(
-                f"Failed to parse version string '{version_string}': {e}"
-            ) from e
+            raise ValueError(f"Failed to parse version string '{version_string}': {e}") from e

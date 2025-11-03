@@ -23,10 +23,10 @@ from duckpond.api.exceptions import (
     ValidationException,
 )
 from duckpond.api.middleware import (
+    AccountContextMiddleware,
     CORSHeadersMiddleware,
     LoggingMiddleware,
     RequestIDMiddleware,
-    AccountContextMiddleware,
 )
 
 __all__ = [

@@ -64,9 +64,7 @@ class BufferManager:
         batch_size = batch.nbytes
 
         async with self._not_full:
-            deadline = (
-                None if timeout is None else asyncio.get_event_loop().time() + timeout
-            )
+            deadline = None if timeout is None else asyncio.get_event_loop().time() + timeout
 
             while self._is_full() and not self._closed:
                 if deadline:
@@ -112,9 +110,7 @@ class BufferManager:
             asyncio.TimeoutError: If timeout expires
         """
         async with self._not_empty:
-            deadline = (
-                None if timeout is None else asyncio.get_event_loop().time() + timeout
-            )
+            deadline = None if timeout is None else asyncio.get_event_loop().time() + timeout
 
             while len(self.queue) == 0 and not self._closed:
                 if deadline:

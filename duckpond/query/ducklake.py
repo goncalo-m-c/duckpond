@@ -7,8 +7,8 @@ from typing import AsyncIterator
 
 import duckdb
 
-from duckpond.query.pool import DuckDBConnectionPool
 from duckpond.accounts.models import Account
+from duckpond.query.pool import DuckDBConnectionPool
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +69,7 @@ class AccountDuckLakeManager:
             Exception: If pool initialization fails
         """
         if self.pool is not None:
-            logger.warning(
-                f"Pool already initialized for account {self.account.account_id}"
-            )
+            logger.warning(f"Pool already initialized for account {self.account.account_id}")
             return
 
         logger.debug(
@@ -139,9 +137,7 @@ class AccountDuckLakeManager:
                 df = result.df()
         """
         if self.pool is None:
-            raise RuntimeError(
-                f"Pool not initialized for account {self.account.account_id}"
-            )
+            raise RuntimeError(f"Pool not initialized for account {self.account.account_id}")
 
         return await self.pool.execute(conn, sql)
 

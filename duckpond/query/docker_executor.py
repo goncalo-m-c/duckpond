@@ -14,8 +14,8 @@ from typing import Literal, Optional
 import pyarrow as pa
 
 from duckpond.config import get_settings
-from duckpond.docker.runners import QueryRunner
 from duckpond.docker.exceptions import ContainerExecutionException
+from duckpond.docker.runners import QueryRunner
 from duckpond.exceptions import QueryExecutionError, QueryTimeoutError
 from duckpond.query.models import QueryMetrics, QueryResult
 from duckpond.query.validator import SQLValidator, sanitize_for_logging

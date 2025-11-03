@@ -5,7 +5,7 @@ including Snappy decompression and Protobuf parsing.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 import snappy
 
@@ -76,9 +76,7 @@ class PrometheusRemoteWrite:
 
         except snappy.UncompressError as e:
             logger.error(f"Failed to decompress Snappy data: {e}")
-            raise ValueError(
-                f"Failed to decompress Prometheus write request: {e}"
-            ) from e
+            raise ValueError(f"Failed to decompress Prometheus write request: {e}") from e
         except Exception as e:
             logger.error(f"Failed to decode Prometheus write request: {e}")
             raise ValueError(f"Failed to decode Prometheus write request: {e}") from e
@@ -128,9 +126,7 @@ class PrometheusRemoteWrite:
         if include_metadata:
             for metadata in write_request.metadata:
                 metadata_map[metadata.metric_family_name] = {
-                    "metric_type": types_pb2.MetricMetadata.MetricType.Name(
-                        metadata.type
-                    ),
+                    "metric_type": types_pb2.MetricMetadata.MetricType.Name(metadata.type),
                     "help": metadata.help,
                     "unit": metadata.unit,
                 }
@@ -237,9 +233,7 @@ class PrometheusRemoteWrite:
             metadata_list.append(
                 {
                     "metric_family_name": metadata.metric_family_name,
-                    "metric_type": types_pb2.MetricMetadata.MetricType.Name(
-                        metadata.type
-                    ),
+                    "metric_type": types_pb2.MetricMetadata.MetricType.Name(metadata.type),
                     "help": metadata.help,
                     "unit": metadata.unit,
                 }
@@ -338,15 +332,9 @@ class PrometheusRemoteWrite:
                     stats["unique_metrics"].add(label.value)
 
             for sample in ts.samples:
-                if (
-                    stats["min_timestamp"] is None
-                    or sample.timestamp < stats["min_timestamp"]
-                ):
+                if stats["min_timestamp"] is None or sample.timestamp < stats["min_timestamp"]:
                     stats["min_timestamp"] = sample.timestamp
-                if (
-                    stats["max_timestamp"] is None
-                    or sample.timestamp > stats["max_timestamp"]
-                ):
+                if stats["max_timestamp"] is None or sample.timestamp > stats["max_timestamp"]:
                     stats["max_timestamp"] = sample.timestamp
 
         stats["unique_metrics"] = len(stats["unique_metrics"])

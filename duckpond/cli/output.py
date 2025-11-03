@@ -155,9 +155,7 @@ def prompt(message: str, default: str = "", password: bool = False) -> str:
     return Prompt.ask(message, default=default, password=password)
 
 
-def print_panel(
-    content: str, title: str | None = None, border_style: str = "cyan"
-) -> None:
+def print_panel(content: str, title: str | None = None, border_style: str = "cyan") -> None:
     """Print content in a bordered panel.
 
     Args:

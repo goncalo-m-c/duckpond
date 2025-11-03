@@ -79,6 +79,5 @@ def get_storage_backend(
 
     else:
         raise ValueError(
-            f"Unknown storage backend: {backend_type}. "
-            f"Supported backends: local, s3, mock"
+            f"Unknown storage backend: {backend_type}. Supported backends: local, s3, mock"
         )

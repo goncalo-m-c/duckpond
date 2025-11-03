@@ -22,6 +22,8 @@ from duckpond.conversion.exceptions import ConversionError, UnsupportedFormatErr
 from duckpond.conversion.factory import ConverterFactory
 from duckpond.exceptions import (
     FileNotFoundError as DuckPondFileNotFoundError,
+)
+from duckpond.exceptions import (
     StorageBackendError,
 )
 from duckpond.storage.backend import StorageBackend
@@ -163,9 +165,7 @@ class LocalBackend(StorageBackend):
         converter = None
 
         try:
-            temp_fd = tempfile.NamedTemporaryFile(
-                suffix=".parquet", delete=False, mode="wb"
-            )
+            temp_fd = tempfile.NamedTemporaryFile(suffix=".parquet", delete=False, mode="wb")
             temp_parquet = Path(temp_fd.name)
             temp_fd.close()
 
@@ -250,9 +250,7 @@ class LocalBackend(StorageBackend):
         conversion_metrics = None
 
         try:
-            remote_upload_path = self._get_upload_full_path(
-                account_id, upload_remote_key
-            )
+            remote_upload_path = self._get_upload_full_path(account_id, upload_remote_key)
             remote_upload_path.parent.mkdir(parents=True, exist_ok=True)
 
             async with aiofiles.open(local_path, "rb") as src:
@@ -262,9 +260,7 @@ class LocalBackend(StorageBackend):
 
             if convert_to_parquet:
                 if original_extension == ".parquet":
-                    remote_table_path = self._get_table_full_path(
-                        account_id, table_remote_key
-                    )
+                    remote_table_path = self._get_table_full_path(account_id, table_remote_key)
                     remote_table_path.parent.mkdir(parents=True, exist_ok=True)
 
                     async with aiofiles.open(local_path, "rb") as src:
@@ -276,13 +272,9 @@ class LocalBackend(StorageBackend):
                         (
                             temp_parquet_path,
                             conversion_metrics,
-                        ) = await self._convert_to_parquet(
-                            local_path, conversion_config
-                        )
+                        ) = await self._convert_to_parquet(local_path, conversion_config)
 
-                        remote_table_path = self._get_table_full_path(
-                            account_id, table_remote_key
-                        )
+                        remote_table_path = self._get_table_full_path(account_id, table_remote_key)
                         remote_table_path.parent.mkdir(parents=True, exist_ok=True)
 
                         async with aiofiles.open(temp_parquet_path, "rb") as src:
@@ -302,16 +294,12 @@ class LocalBackend(StorageBackend):
                     pass
 
                 return {
-                    "remote_path": self._build_tables_account_key(
-                        account_id, table_remote_key
-                    ),
+                    "remote_path": self._build_tables_account_key(account_id, table_remote_key),
                     "metrics": conversion_metrics,
                 }
             else:
                 return {
-                    "remote_path": self._build_uploads_account_key(
-                        account_id, upload_remote_key
-                    ),
+                    "remote_path": self._build_uploads_account_key(account_id, upload_remote_key),
                     "metrics": None,
                 }
 
@@ -348,9 +336,7 @@ class LocalBackend(StorageBackend):
             remote_path = self._get_full_path(account_id, remote_key)
 
             if not remote_path.exists():
-                raise DuckPondFileNotFoundError(
-                    self._build_account_key(account_id, remote_key)
-                )
+                raise DuckPondFileNotFoundError(self._build_account_key(account_id, remote_key))
 
             await aiofiles.os.remove(remote_path)
 
@@ -494,9 +480,7 @@ class LocalBackend(StorageBackend):
             remote_path = self._get_full_path(account_id, remote_key)
 
             if not remote_path.exists():
-                raise DuckPondFileNotFoundError(
-                    self._build_account_key(account_id, remote_key)
-                )
+                raise DuckPondFileNotFoundError(self._build_account_key(account_id, remote_key))
 
             return remote_path.stat().st_size
 
@@ -505,9 +489,7 @@ class LocalBackend(StorageBackend):
                 raise
             raise StorageBackendError("local", "get_file_size", str(e)) from e
 
-    async def get_file_metadata(
-        self, remote_key: str, account_id: str
-    ) -> dict[str, Any]:
+    async def get_file_metadata(self, remote_key: str, account_id: str) -> dict[str, Any]:
         """Get file metadata.
 
         Args:
@@ -525,9 +507,7 @@ class LocalBackend(StorageBackend):
             remote_path = self._get_full_path(account_id, remote_key)
 
             if not remote_path.exists():
-                raise DuckPondFileNotFoundError(
-                    self._build_account_key(account_id, remote_key)
-                )
+                raise DuckPondFileNotFoundError(self._build_account_key(account_id, remote_key))
 
             metadata_path = self._get_metadata_path(remote_path)
 

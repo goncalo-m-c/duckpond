@@ -317,8 +317,8 @@ def upload(
             print_info(f"Dataset: {dataset_name}")
             print_info(f"File size: {format_size(file_size_bytes)}")
 
-            from duckpond.conversion.factory import ConverterFactory
             from duckpond.conversion.config import ConversionConfig
+            from duckpond.conversion.factory import ConverterFactory
 
             if not ConverterFactory.is_supported(file_path):
                 print_error(

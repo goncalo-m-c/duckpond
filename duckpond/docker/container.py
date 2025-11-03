@@ -9,7 +9,6 @@ This module provides a generic Docker container wrapper that handles:
 
 import asyncio
 import os
-from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -18,7 +17,6 @@ import structlog
 from duckpond.docker.config import ContainerConfig
 from duckpond.docker.exceptions import (
     ContainerExecutionException,
-    ContainerHealthCheckException,
     ContainerNotFoundException,
     ContainerStartupException,
     ContainerStopException,
@@ -44,7 +42,7 @@ class DockerContainer:
 
     Usage:
         config = ContainerConfig(
-            image="python:3.12-slim",
+            image="duckpond:25.1",
             command=["python", "script.py"],
             name="my-container",
         )

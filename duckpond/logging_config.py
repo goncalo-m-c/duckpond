@@ -18,9 +18,7 @@ def add_timestamp(logger: Any, method_name: str, event_dict: EventDict) -> Event
     return event_dict
 
 
-def censor_sensitive_keys(
-    logger: Any, method_name: str, event_dict: EventDict
-) -> EventDict:
+def censor_sensitive_keys(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
     """Remove sensitive data from logs."""
     sensitive_keys = {"api_key", "password", "secret", "token", "authorization"}
 

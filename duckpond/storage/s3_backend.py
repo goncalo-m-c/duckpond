@@ -20,6 +20,8 @@ from botocore.exceptions import ClientError
 
 from duckpond.exceptions import (
     FileNotFoundError as DuckPondFileNotFoundError,
+)
+from duckpond.exceptions import (
     StorageBackendError,
 )
 from duckpond.storage.backend import StorageBackend
@@ -106,9 +108,7 @@ class S3Backend(StorageBackend):
             StorageBackendError: If conversion fails
         """
         try:
-            temp_parquet = tempfile.NamedTemporaryFile(
-                suffix=".parquet", delete=False, mode="wb"
-            )
+            temp_parquet = tempfile.NamedTemporaryFile(suffix=".parquet", delete=False, mode="wb")
             temp_parquet.close()
 
             file_ext = local_path.suffix.lower()
@@ -190,9 +190,7 @@ class S3Backend(StorageBackend):
 
         try:
             async with self._session.client(**self._get_client_kwargs()) as s3:
-                upload_full_key = self._build_uploads_account_key(
-                    account_id, upload_remote_key
-                )
+                upload_full_key = self._build_uploads_account_key(account_id, upload_remote_key)
 
                 await s3.upload_file(
                     str(local_path),
@@ -201,9 +199,7 @@ class S3Backend(StorageBackend):
                 )
 
                 if convert_to_parquet:
-                    table_full_key = self._build_tables_account_key(
-                        account_id, table_remote_key
-                    )
+                    table_full_key = self._build_tables_account_key(account_id, table_remote_key)
 
                     if original_extension == ".parquet":
                         await s3.upload_file(
@@ -501,9 +497,7 @@ class S3Backend(StorageBackend):
                 raise
             raise StorageBackendError("s3", "get_file_size", str(e)) from e
 
-    async def get_file_metadata(
-        self, remote_key: str, account_id: str
-    ) -> dict[str, Any]:
+    async def get_file_metadata(self, remote_key: str, account_id: str) -> dict[str, Any]:
         """Get file metadata.
 
         Args:
@@ -526,9 +520,7 @@ class S3Backend(StorageBackend):
 
                     metadata = {
                         "size": response["ContentLength"],
-                        "content_type": response.get(
-                            "ContentType", "application/octet-stream"
-                        ),
+                        "content_type": response.get("ContentType", "application/octet-stream"),
                         "last_modified": response["LastModified"].isoformat(),
                         "etag": response.get("ETag", "").strip('"'),
                     }

@@ -119,9 +119,7 @@ class StreamingIngestor:
         }
 
         try:
-            producer_task = asyncio.create_task(
-                self._producer(handler, ipc_stream_path)
-            )
+            producer_task = asyncio.create_task(self._producer(handler, ipc_stream_path))
 
             consumer_task = asyncio.create_task(self._consumer(consumer_context))
 
@@ -258,9 +256,7 @@ class StreamingIngestor:
             )
 
         except Exception as e:
-            raise StreamingError(
-                f"Failed to flush batches to {parquet_path}: {e}"
-            ) from e
+            raise StreamingError(f"Failed to flush batches to {parquet_path}: {e}") from e
 
     def _compute_checksum(self, file_path: Path) -> str:
         """Compute CRC32 checksum of file.

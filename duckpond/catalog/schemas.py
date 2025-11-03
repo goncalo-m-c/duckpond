@@ -87,9 +87,7 @@ class PartitionSpec(BaseModel):
 
     type: PartitionType = Field(..., description="Partition type")
     columns: list[str] = Field(default_factory=list, description="Partition columns")
-    buckets: int | None = Field(
-        None, ge=1, description="Number of buckets for hash partitioning"
-    )
+    buckets: int | None = Field(None, ge=1, description="Number of buckets for hash partitioning")
 
     @field_validator("columns", mode="after")
     @classmethod
@@ -121,9 +119,7 @@ class TableSchema(BaseModel):
     def validate_schema(self) -> "TableSchema":
         """Validate primary key and partition columns exist in schema."""
         if self.partition is None:
-            self.partition = PartitionSpec(
-                type=PartitionType.NONE, columns=[], buckets=None
-            )
+            self.partition = PartitionSpec(type=PartitionType.NONE, columns=[], buckets=None)
 
         column_names = {col.name for col in self.columns}
 
@@ -132,9 +128,7 @@ class TableSchema(BaseModel):
             for pk_col in self.primary_key:
                 pk_col_lower = pk_col.lower()
                 if pk_col_lower not in column_names:
-                    raise ValueError(
-                        f"Primary key column '{pk_col_lower}' not found in schema"
-                    )
+                    raise ValueError(f"Primary key column '{pk_col_lower}' not found in schema")
                 normalized_pk.append(pk_col_lower)
             self.primary_key = normalized_pk
 
@@ -151,14 +145,10 @@ class DatasetMetadata(BaseModel):
     name: str = Field(..., description="Dataset name")
     type: DatasetType = Field(..., description="Dataset type")
     format: TableFormat | None = Field(None, description="Storage format (tables only)")
-    schema: TableSchema | None = Field(
-        None, description="Table schema (tables/views only)"
-    )
+    schema: TableSchema | None = Field(None, description="Table schema (tables/views only)")
     location: str | None = Field(None, description="Storage location (external tables)")
     description: str | None = Field(None, description="Dataset description")
-    properties: dict[str, Any] = Field(
-        default_factory=dict, description="Custom properties"
-    )
+    properties: dict[str, Any] = Field(default_factory=dict, description="Custom properties")
     created_at: datetime | None = Field(None, description="Creation timestamp")
     updated_at: datetime | None = Field(None, description="Last update timestamp")
     row_count: int | None = Field(None, ge=0, description="Approximate row count")
@@ -178,9 +168,7 @@ class DatasetMetadata(BaseModel):
 
     @field_validator("schema")
     @classmethod
-    def validate_schema_required(
-        cls, v: TableSchema | None, info: Any
-    ) -> TableSchema | None:
+    def validate_schema_required(cls, v: TableSchema | None, info: Any) -> TableSchema | None:
         """Ensure schema is provided for tables."""
         dataset_type = info.data.get("type")
         if dataset_type == DatasetType.TABLE and v is None:
@@ -215,15 +203,11 @@ class CreateDatasetRequest(BaseModel):
 
     name: str = Field(..., description="Dataset name")
     type: DatasetType = Field(..., description="Dataset type")
-    format: TableFormat = Field(
-        default=TableFormat.PARQUET, description="Storage format"
-    )
+    format: TableFormat = Field(default=TableFormat.PARQUET, description="Storage format")
     schema: TableSchema = Field(..., description="Table schema")
     location: str | None = Field(None, description="Storage location (external tables)")
     description: str | None = Field(None, description="Dataset description")
-    properties: dict[str, Any] = Field(
-        default_factory=dict, description="Custom properties"
-    )
+    properties: dict[str, Any] = Field(default_factory=dict, description="Custom properties")
     if_not_exists: bool = Field(default=False, description="Skip if dataset exists")
 
     model_config = {"protected_namespaces": ()}
@@ -246,9 +230,7 @@ class DatasetListResponse(BaseModel):
 class SchemaEvolutionRequest(BaseModel):
     """Request to evolve table schema."""
 
-    add_columns: list[ColumnSchema] = Field(
-        default_factory=list, description="Columns to add"
-    )
+    add_columns: list[ColumnSchema] = Field(default_factory=list, description="Columns to add")
     drop_columns: list[str] = Field(default_factory=list, description="Columns to drop")
     rename_columns: dict[str, str] = Field(
         default_factory=dict, description="Columns to rename (old_name -> new_name)"
