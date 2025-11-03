@@ -1,4 +1,4 @@
-FROM python:3.13-slim AS build
+FROM python:3.13-slim
 
 COPY --from=ghcr.io/astral-sh/uv:0.8.21 /uv /uvx /bin/
 
@@ -15,9 +15,16 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libffi-dev \
     libsnappy-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml uv.lock ./
+RUN curl https://install.duckdb.org | sh
+
+ENV PATH="/root/.duckdb/cli/latest:$PATH"
+
+COPY pyproject.toml uv.lock /app/
+
+COPY duckpond /app/
 
 WORKDIR /app
 
@@ -26,20 +33,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev
 
-COPY duckpond ./duckpond
-
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
-
-FROM python:3.13-slim AS runtime
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN groupadd -g 1001 appgroup && \
-    useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser
+# RUN groupadd -g 1001 appgroup && \
+#     useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser
 
 WORKDIR /app
 
-COPY --from=build --chown=appuser:appgroup /app .
-
-USER appuser
+# USER appuser

@@ -1,9 +1,11 @@
 """Query executor for DuckDB with DuckLake catalog integration."""
 
 import asyncio
+import base64
 import logging
 import time
-from typing import Literal
+from pathlib import Path
+from typing import Literal, Optional
 
 import duckdb
 import pyarrow as pa
@@ -108,9 +110,7 @@ class QueryExecutor:
             sql_with_limit = self._apply_limit(sql, limit)
 
             result = await asyncio.wait_for(
-                self._execute_with_connection(
-                    sql_with_limit, output_format, attach_catalog
-                ),
+                self._execute_with_connection(sql_with_limit, output_format, attach_catalog),
                 timeout=timeout_seconds,
             )
 
@@ -199,9 +199,7 @@ class QueryExecutor:
                 loop = asyncio.get_event_loop()
 
                 if attach_catalog:
-                    await loop.run_in_executor(
-                        None, self._attach_catalog, conn, attach_catalog
-                    )
+                    await loop.run_in_executor(None, self._attach_catalog, conn, attach_catalog)
 
                 def execute_query():
                     return conn.execute(sql)
@@ -259,9 +257,7 @@ class QueryExecutor:
 
         return data, row_count
 
-    def _attach_catalog(
-        self, conn: duckdb.DuckDBPyConnection, catalog_name: str
-    ) -> None:
+    def _attach_catalog(self, conn: duckdb.DuckDBPyConnection, catalog_name: str) -> None:
         """
         Attach additional catalog to connection.
 
@@ -279,9 +275,7 @@ class QueryExecutor:
             catalog_path = self._resolve_catalog_path(account, catalog_name)
 
             ducklake_url = f"sqlite:{catalog_path}"
-            attach_sql = (
-                f"ATTACH '{ducklake_url}' AS \"{catalog_name}\" (TYPE ducklake)"
-            )
+            attach_sql = f"ATTACH '{ducklake_url}' AS \"{catalog_name}\" (TYPE ducklake)"
 
             logger.debug(f"Attaching catalog: {attach_sql}")
             conn.execute(attach_sql)
@@ -313,9 +307,7 @@ class QueryExecutor:
         settings = get_settings()
 
         account_data_dir = (
-            Path(settings.local_storage_path).expanduser()
-            / "accounts"
-            / account.account_id
+            Path(settings.local_storage_path).expanduser() / "accounts" / account.account_id
         )
         catalog_path = account_data_dir / f"{catalog_name}_catalog.sqlite"
 
@@ -402,9 +394,7 @@ class QueryExecutor:
                 loop = asyncio.get_event_loop()
 
                 if attach_catalog:
-                    await loop.run_in_executor(
-                        None, self._attach_catalog, conn, attach_catalog
-                    )
+                    await loop.run_in_executor(None, self._attach_catalog, conn, attach_catalog)
 
                 result = await loop.run_in_executor(None, conn.execute, explain_sql)
                 df = await loop.run_in_executor(None, result.fetchdf)
